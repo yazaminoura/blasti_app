@@ -1,0 +1,212 @@
+<?php
+
+namespace App\Http\Controllers\Client;
+
+use App\Http\Controllers\Controller;
+use App\Mail\ReservationMail;
+use App\Models\ModeReglement;
+use App\Models\Reservation;
+use App\Models\Voyage;
+use App\Support\Cmi;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+
+class ReservationController extends Controller
+{
+    /**
+     * Booking page of a voyage (seat map + payment mode).
+     */
+    public function index(Request $request, Voyage $voyage)
+    {
+        // seats of card payments abandoned for too long become free again
+        Reservation::expirePendingPayments();
+
+        $voyage->load(['autocar.societe', 'autocar.equipements', 'autocar.options', 'villeDepart', 'villeArrivee', 'typeVoyage', 'arrets.ville']);
+
+        // the trip asked for: stop ids (?de=&a=, from the booking page) or city ids (?from=&to=, from the search)
+        $segment = $request->filled('de')
+            ? $voyage->segmentByIds($request->integer('de'), $request->integer('a'))
+            : $voyage->segmentFor($request->integer('from') ?: null, $request->integer('to') ?: null);
+        $segment ??= $voyage->segmentFor();
+
+        if (! $segment || $segment[0]->passage_at->isPast()) {
+            return redirect()->route('voyages.list')->with('error', __('Ce voyage est déjà parti. Choisissez un autre départ.'));
+        }
+
+        [$depart, $arrivee] = $segment;
+        $prix = $voyage->segmentPrice($depart, $arrivee);
+        $reservedSeats = $voyage->seatsTaken($depart, $arrivee);
+        $equipements = $voyage->autocar?->equipements ?? collect();
+        $modes = self::availableModes();
+
+        return view('client.reservations.index', compact('voyage', 'equipements', 'modes', 'depart', 'arrivee', 'prix', 'reservedSeats'));
+    }
+
+    /**
+     * Old entry point kept for existing links: /client/create/reservation?id={voyage}
+     */
+    public function create(Request $request)
+    {
+        if ($request->filled('id')) {
+            return redirect()->route('client.reservations.show', $request->integer('id'));
+        }
+
+        return redirect()->route('voyages.list');
+    }
+
+    public function store(Request $request)
+    {
+        $request->validate([
+            'voyage_id'         => ['required', 'integer', 'exists:voyages,id'],
+            'arret_depart_id'   => ['nullable', 'integer'],
+            'arret_arrivee_id'  => ['nullable', 'integer'],
+            'seats'             => ['required', 'array', 'size:1'],
+            'seats.*'           => ['required', 'integer', 'min:1'],
+            'mode_reglement_id' => ['required', 'integer', 'in:' . self::availableModes()->pluck('id')->join(',')],
+        ], [
+            'seats.required'             => __('Veuillez choisir un siège.'),
+            'seats.size'                 => __('Veuillez choisir un seul siège.'),
+            'mode_reglement_id.required' => __('Veuillez choisir un mode de règlement.'),
+            'mode_reglement_id.in'       => __('Le mode de règlement choisi est invalide.'),
+        ]);
+
+        $seat = (int) $request->seats[0];
+        $mode = ModeReglement::findOrFail($request->mode_reglement_id);
+        $online = (bool) $mode->en_ligne;
+        Reservation::expirePendingPayments();
+
+        try {
+            $reservation = DB::transaction(function () use ($request, $seat, $online) {
+                // Lock the voyage row so two clients cannot book the same seat at the same time
+                $voyage = Voyage::with(['autocar', 'arrets'])->lockForUpdate()->findOrFail($request->voyage_id);
+
+                $segment = $request->filled('arret_depart_id')
+                    ? $voyage->segmentByIds($request->arret_depart_id, $request->arret_arrivee_id)
+                    : $voyage->segmentFor();
+                if (! $segment) {
+                    throw new \DomainException(__('Ce trajet n\'est pas proposé par ce voyage.'));
+                }
+                [$depart, $arrivee] = $segment;
+
+                if ($depart->passage_at->isPast()) {
+                    throw new \DomainException(__('Ce voyage est déjà parti, la réservation est impossible.'));
+                }
+
+                if (! $voyage->autocar || $seat > $voyage->autocar->nbr_siege) {
+                    throw new \DomainException(__("Le siège choisi n'existe pas dans cet autocar."));
+                }
+
+                // taken = sold on at least part of this segment (cancelled tickets are ignored by the global scope)
+                if (in_array($seat, $voyage->seatsTaken($depart, $arrivee), true)) {
+                    throw new \DomainException(__("Ce siège vient d'être réservé par un autre client. Veuillez en choisir un autre."));
+                }
+
+                return Reservation::create([
+                    'num_siege'         => $seat,
+                    // card payment: seat held until CMI confirms; otherwise confirmed, paid at boarding
+                    'statut'            => $online ? Reservation::EN_ATTENTE : Reservation::CONFIRMEE,
+                    'user_id'           => $request->user()->id,
+                    'mode_reglement_id' => $request->mode_reglement_id,
+                    'date_reservation'  => now(),
+                    // the ticket covers the client's segment only
+                    'date_depart'       => $depart->passage_at->toDateString(),
+                    'date_arrivee'      => $arrivee->passage_at->toDateString(),
+                    'heure_depart'      => $depart->passage_at->format('H:i:s'),
+                    'heure_arrivee'     => $arrivee->passage_at->format('H:i:s'),
+                    'ville_depart_id'   => $depart->ville_id,
+                    'ville_arrivee_id'  => $arrivee->ville_id,
+                    'autocar_id'        => $voyage->autocar_id,
+                    'type_voyage_id'    => $voyage->type_voyage_id,
+                    'prix'              => $voyage->segmentPrice($depart, $arrivee),
+                    'frais'             => 0,
+                    'voyage_id'         => $voyage->id,
+                    'arret_depart_id'   => $depart->id,
+                    'arret_arrivee_id'  => $arrivee->id,
+                ]);
+            });
+        } catch (\DomainException $e) {
+            return back()->withInput()->with('error', $e->getMessage());
+        } catch (\Throwable $e) {
+            report($e);
+            return back()->withInput()->with('error', __('Une erreur est survenue lors de la réservation. Veuillez réessayer.'));
+        }
+
+        if ($online) {
+            return redirect()->route('payment.cmi.start', $reservation);
+        }
+
+        ReservationMail::sendTo($reservation, 'confirmee');
+
+        return redirect()->route('ticket.show', $reservation->id)
+            ->with('success', __('Réservation confirmée ! Votre billet vous a aussi été envoyé par e-mail.'));
+    }
+
+    public function show($id)
+    {
+        $reservation = $this->findOwnedReservation($id);
+
+        return view('client.reservations.ticket', compact('reservation'));
+    }
+
+    public function download($id)
+    {
+        $reservation = $this->findOwnedReservation($id);
+        abort_if($reservation->isCancelled(), 404, __('Ce billet a été annulé.'));
+
+        $pdf = Pdf::loadView('client.reservations.ticket-pdf', compact('reservation'))
+            ->setPaper('a5', 'landscape');
+
+        return $pdf->download('ticket-' . $reservation->id . '.pdf');
+    }
+
+    /**
+     * The client cancels their own ticket (until SAFAR_ANNULATION_HEURES hours before departure).
+     */
+    public function cancel(Reservation $reservation)
+    {
+        abort_unless($reservation->user_id === auth()->id(), 403);
+
+        if (! $reservation->canBeCancelledByClient()) {
+            return back()->with('error', $reservation->isCancelled()
+                ? __('Ce billet est déjà annulé.')
+                : __('Le bus est déjà parti : ce billet ne peut plus être annulé.'));
+        }
+
+        $reservation->cancel('client');
+        ReservationMail::sendTo($reservation, 'annulee');
+
+        if (! $reservation->isPaid()) {
+            return redirect()->route('client.profile.reservations.index')->with('success', __('Votre billet est annulé et le siège a été libéré.'));
+        }
+
+        return redirect()->route('client.profile.reservations.index')->with('success', (float) $reservation->montant_rembourse > 0
+            ? __('Votre billet est annulé. Vous serez remboursé de :montant DH : notre équipe traite le remboursement.', [
+                'montant' => number_format($reservation->montant_rembourse, 2, ',', ' '),
+            ])
+            : __('Votre billet est annulé. Aucun remboursement n\'est prévu à ce délai du départ.'));
+    }
+
+    /** Payment modes offered to clients: card payment only when CMI is configured. */
+    public static function availableModes()
+    {
+        return ModeReglement::orderBy('mode_reglement')->get()
+            ->filter(fn ($mode) => ! $mode->en_ligne || Cmi::enabled())
+            ->values();
+    }
+
+    /**
+     * A client may only see their own tickets (cancelled ones included); admins with the permission may see all of them.
+     */
+    private function findOwnedReservation($id): Reservation
+    {
+        $reservation = Reservation::withoutGlobalScope('active')
+            ->with(['user', 'villeDepart', 'villeArrivee', 'modeReglement', 'autocar.societe'])
+            ->findOrFail($id);
+
+        $user = auth()->user();
+        abort_unless($reservation->user_id === $user->id || ($user->isadmin && $user->hasPermission('reservations.read')), 403);
+
+        return $reservation;
+    }
+}
