@@ -1,66 +1,151 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
-
 <p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
+  <img src="public/assets/img/blasti-logo.png" alt="Blasti" height="90">
 </p>
 
-## About Laravel
+<h3 align="center">Blasti — bus tickets between Moroccan cities</h3>
+<p align="center"><em>« Blasti » (بلاصتي) means “my seat” in Darija: every ticket is a seat reserved for you.</em></p>
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+---
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Blasti is a bus-ticket booking platform built with Laravel 11. Travellers search for a trip, pick their seat on the bus map and get a PDF ticket. Bus companies' trips, fleets, bookings and refunds are managed from an admin panel.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Features
 
-## Learning Laravel
+**Public site and client area**
+- Search by departure city, arrival city and date. If no bus runs that day, the next departures are shown.
+- **Buses with intermediate stops**, for example Fès → Imouzzer → Ifrane → … → Marrakech:
+  - A client can ride any part of the line and pays only that segment.
+  - A seat freed at a stop is sold again for the rest of the trip.
+  - The bus can still be boarded at later stops after it has left the first one.
+- Seat map per segment: seats sold on an overlapping segment are shown as taken.
+- Payment at boarding or by card (CMI, the Moroccan card-payment gateway: 3D Pay Hosting, ver3 SHA-512 hash).
+- Client account with a dashboard, tickets (web + PDF), profile and settings.
+- Cancellation until the bus leaves, with **refunds that depend on how early the client cancels** (see below).
+- E-mails: confirmation (PDF attached), reminder the day before, cancellation with the refund amount.
+- Pages: Destinations, Companies, Help (FAQ + refund table), About, Contact.
+- **French, English and Arabic** (right-to-left layout), plus light and dark mode.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+**Admin panel**
+- Trips with their stops (time and price from the first stop), buses, companies, cities, trip types, payment methods.
+- Bookings:
+  - Filter by status (to pay, paid, cancelled, to refund).
+  - Mark a booking as paid.
+  - Cancel a booking (the client is refunded 100 %).
+  - Record a refund, with its amount.
+- Dashboard with revenue and occupancy, CSV exports.
+- Users, roles and permissions.
+- **Apparence**: one brand colour recolours the whole site and the logo.
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Tech stack
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- PHP 8.2+, Laravel 11, Blade, Bootstrap 5
+- MySQL (production) or SQLite (local and tests)
+- barryvdh/laravel-dompdf for PDF tickets
+- PHPUnit feature tests
 
-## Laravel Sponsors
+## Getting started
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+git clone https://github.com/yazaminoura/blasti_app.git
+cd blasti_app
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
+```
 
-### Premium Partners
+Choose a database in `.env`:
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+- **SQLite (quickest):** create the file `database/database.sqlite`, then set `DB_CONNECTION=sqlite` and remove the other `DB_*` lines.
+- **MySQL:** fill in `DB_DATABASE`, `DB_USERNAME` and `DB_PASSWORD`.
 
-## Contributing
+Then run:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+php artisan migrate        # also loads the demo data on an empty database
+php artisan storage:link
+php artisan serve
+```
 
-## Code of Conduct
+Open http://127.0.0.1:8000.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### Demo data
 
-## Security Vulnerabilities
+While `DEMO_DATA=true` (the default), `php artisan migrate` fills an empty database with realistic data:
+- 22 cities and 6 bus companies with their buses;
+- about 270 trips, from two weeks ago to three weeks ahead, several of them with intermediate stops;
+- about 2,600 bookings, some covering only part of a line.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+The same data is created on every machine.
 
-## License
+| Account | E-mail | Password |
+|---|---|---|
+| Admin | `admin@blasti.ma` | `password` |
+| Clients | e.g. `salma.bennani@example.com` | `password` |
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+> Change these passwords, or set `DEMO_DATA=false`, before going live. To start over: `php artisan migrate:fresh`.
+
+## Configuration
+
+| `.env` key | Purpose |
+|---|---|
+| `APP_LOCALE` | Default language: `fr`, `en` or `ar` |
+| `APP_TIMEZONE` | `Africa/Casablanca` (departure times and the cancellation deadline depend on it) |
+| `SAFAR_TELEPHONE`, `SAFAR_EMAIL`, `SAFAR_ADRESSE` | Contact details shown in the footer and on the contact page |
+| `SAFAR_FACEBOOK`, `SAFAR_INSTAGRAM`, `SAFAR_TIKTOK`, `SAFAR_X`, `SAFAR_LINKEDIN` | Social links; empty ones are hidden |
+| `CMI_CLIENT_ID`, `CMI_STORE_KEY`, `CMI_GATEWAY_URL` | Card payment. Card payment stays hidden until the ID and store key are set **and** a payment method is marked “en ligne” in the admin |
+| `MAIL_*` | SMTP settings for the e-mails (`MAIL_MAILER=log` writes them to `storage/logs`) |
+| `DEMO_DATA` | `false` to start with an empty database |
+
+**Refund policy**: `config/safar.php` → `annulation.paliers` (hours before boarding ⇒ % refunded):
+
+| Client cancels | Refunded |
+|---|---|
+| more than 3 days before | 100 % |
+| 2 to 3 days before | 80 % |
+| 1 to 2 days before | 60 % |
+| less than 1 day before | 50 % |
+| after the bus has left | cancellation impossible |
+
+Some tickets are refunded differently:
+- Unpaid tickets (pay at boarding) are cancelled for free.
+- A cancellation by the company (admin) is refunded 100 %.
+
+### Scheduled tasks
+
+Add one cron entry on the server:
+
+```
+* * * * * cd /path/to/blasti_app && php artisan schedule:run >> /dev/null 2>&1
+```
+
+It runs two commands:
+- `reservations:rappels` (daily at 18:00): e-mails a reminder for tomorrow's trips.
+- `reservations:expirer` (every 5 minutes): frees the seats of card payments left unfinished.
+
+## Tests
+
+```bash
+php artisan test
+```
+
+The tests run on an in-memory SQLite database. They cover:
+- booking and payment flows;
+- seat resale between stops;
+- the refund tiers;
+- admin permissions and business rules.
+
+## Project layout
+
+| Path | Contents |
+|---|---|
+| `app/Models/Voyage.php` | Trips, stops, segment price, seats taken (`serving()`, `segmentFor()`, `seatsTaken()`) |
+| `app/Models/VoyageArret.php` | A stop of a trip |
+| `app/Models/Reservation.php` | Booking status, payment, cancellation and refund (`refundQuote()`, `cancel()`) |
+| `app/Http/Controllers/Client/` | Booking, CMI payment, client area |
+| `app/Http/Controllers/Admin/`, `VoyageController.php` | Admin panel and public search |
+| `app/Support/Cmi.php` | CMI hash, form fields and callback check |
+| `app/Support/BrandImages.php` | Recolours the logos to the brand colour |
+| `database/seeders/DemoDataSeeder.php` | Demo data |
+| `lang/{fr,en,ar}.json` | Translations. The keys are the French texts |
+| `public/assets/css/blasti.css`, `public/assets/admin/` | Site and admin styles |
