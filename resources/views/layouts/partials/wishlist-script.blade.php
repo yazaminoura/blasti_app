@@ -75,7 +75,12 @@
                 })
                 .then(function(res) {
                     if (res.status === 401) {
-                        window.location.href = loginUrl;
+                        // guest: same sign in / sign up popup as the seat map
+                        if (window.BlastiAuth) {
+                            window.BlastiAuth.open('login', @json(__('Connectez-vous pour enregistrer vos voyages favoris.')));
+                        } else {
+                            window.location.href = loginUrl;
+                        }
                         return Promise.resolve({
                             skip: true
                         });

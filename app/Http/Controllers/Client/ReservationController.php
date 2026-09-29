@@ -55,29 +55,128 @@ class ReservationController extends Controller
         return redirect()->route('voyages.list');
     }
 
+    /**
+     * Seat map → payment step: the chosen seats are checked and kept in the session (not held yet),
+     * then the payment page shows the order and the payment choice.
+     */
+    public function checkout(Request $request)
+    {
+        $request->validate([
+            'voyage_id'        => ['required', 'integer', 'exists:voyages,id'],
+            'arret_depart_id'  => ['nullable', 'integer'],
+            'arret_arrivee_id' => ['nullable', 'integer'],
+            'seats'            => ['required', 'array', 'min:1', 'max:' . config('safar.max_sieges')],
+            'seats.*'          => ['required', 'integer', 'min:1', 'distinct'],
+        ], [
+            'seats.required'   => __('Veuillez choisir au moins un siège.'),
+            'seats.max'        => __('Vous pouvez réserver au maximum :max sièges à la fois.', ['max' => config('safar.max_sieges')]),
+            'seats.*.distinct' => __('Vous avez choisi deux fois le même siège.'),
+        ]);
+
+        $request->session()->put('panier', [
+            'voyage_id' => $request->integer('voyage_id'),
+            'de' => $request->integer('arret_depart_id') ?: null,
+            'a' => $request->integer('arret_arrivee_id') ?: null,
+            'seats' => collect($request->seats)->map(fn ($s) => (int) $s)->sort()->values()->all(),
+        ]);
+
+        return redirect()->route('client.reservations.payment');
+    }
+
+    /** Payment step: summary of the order + payment choice (card online, or pay at boarding). */
+    public function payment(Request $request)
+    {
+        $panier = $request->session()->get('panier');
+        if (! $panier) {
+            return redirect()->route('voyages.list');
+        }
+
+        Reservation::expirePendingPayments();
+        $voyage = Voyage::with(['autocar.societe', 'arrets.ville'])->find($panier['voyage_id']);
+        $segment = $voyage ? ($panier['de'] ? $voyage->segmentByIds($panier['de'], $panier['a']) : $voyage->segmentFor()) : null;
+        if (! $segment || $segment[0]->passage_at->isPast()) {
+            $request->session()->forget('panier');
+
+            return redirect()->route('voyages.list')->with('error', __('Ce voyage est déjà parti. Choisissez un autre départ.'));
+        }
+        [$depart, $arrivee] = $segment;
+
+        // someone else took a seat meanwhile: back to the seat map
+        $pris = collect($panier['seats'])->intersect($voyage->seatsTaken($depart, $arrivee));
+        if ($pris->isNotEmpty()) {
+            return redirect()->route('client.reservations.show', ['voyage' => $voyage, 'de' => $depart->id, 'a' => $arrivee->id])
+                ->with('error', trans_choice('{1} Le siège :seats vient d\'être réservé par un autre client. Veuillez en choisir un autre.|[2,*] Les sièges :seats viennent d\'être réservés par d\'autres clients. Veuillez en choisir d\'autres.', $pris->count(), ['seats' => $pris->join(', ')]));
+        }
+
+        $prix = $voyage->segmentPrice($depart, $arrivee);
+        $seats = $panier['seats'];
+        $modes = self::availableModes($request->user());
+        $cashRefused = ! $request->user()->mayPayAtBoarding();
+
+        return view('client.reservations.paiement', compact('voyage', 'depart', 'arrivee', 'prix', 'seats', 'modes', 'cashRefused'));
+    }
+
+    /** All the tickets of an order (after booking or after the card payment). */
+    public function order(Request $request, string $commande)
+    {
+        $billets = $this->ownedOrder($commande);
+
+        return view('client.reservations.commande', ['billets' => $billets, 'commande' => $commande]);
+    }
+
+    /** One PDF with every ticket of the order (one page + QR code per seat). */
+    public function downloadOrder(string $commande)
+    {
+        $billets = $this->ownedOrder($commande)->reject->isCancelled()->values();
+        abort_if($billets->isEmpty(), 404, __('Ce billet a été annulé.'));
+
+        return Pdf::loadView('client.reservations.ticket-pdf', ['reservations' => $billets])
+            ->setPaper('a5', 'landscape')
+            ->download('billets-' . $commande . '.pdf');
+    }
+
+    private function ownedOrder(string $commande)
+    {
+        $billets = Reservation::withoutGlobalScope('active')
+            ->with(['user', 'villeDepart', 'villeArrivee', 'modeReglement', 'autocar.societe'])
+            ->where('commande', $commande)->orderBy('num_siege')->get();
+        abort_if($billets->isEmpty(), 404);
+        abort_unless($billets->first()->user_id === auth()->id(), 403);
+
+        return $billets;
+    }
+
     public function store(Request $request)
     {
         $request->validate([
             'voyage_id'         => ['required', 'integer', 'exists:voyages,id'],
             'arret_depart_id'   => ['nullable', 'integer'],
             'arret_arrivee_id'  => ['nullable', 'integer'],
-            'seats'             => ['required', 'array', 'size:1'],
-            'seats.*'           => ['required', 'integer', 'min:1'],
-            'mode_reglement_id' => ['required', 'integer', 'in:' . self::availableModes()->pluck('id')->join(',')],
+            'seats'             => ['required', 'array', 'min:1', 'max:' . config('safar.max_sieges')],
+            'seats.*'           => ['required', 'integer', 'min:1', 'distinct'],
+            'mode_reglement_id' => ['required', 'integer', 'in:' . self::availableModes($request->user())->pluck('id')->join(',')],
         ], [
-            'seats.required'             => __('Veuillez choisir un siège.'),
-            'seats.size'                 => __('Veuillez choisir un seul siège.'),
+            'seats.required'             => __('Veuillez choisir au moins un siège.'),
+            'seats.max'                  => __('Vous pouvez réserver au maximum :max sièges à la fois.', ['max' => config('safar.max_sieges')]),
+            'seats.*.distinct'           => __('Vous avez choisi deux fois le même siège.'),
             'mode_reglement_id.required' => __('Veuillez choisir un mode de règlement.'),
             'mode_reglement_id.in'       => __('Le mode de règlement choisi est invalide.'),
         ]);
 
-        $seat = (int) $request->seats[0];
+        $seats = collect($request->seats)->map(fn ($seat) => (int) $seat)->sort()->values();
         $mode = ModeReglement::findOrFail($request->mode_reglement_id);
         $online = (bool) $mode->en_ligne;
         Reservation::expirePendingPayments();
 
+        // unpaid seats are capped per account (config safar.max_non_payes): more seats = pay by card
+        $maxUnpaid = (int) config('safar.max_non_payes');
+        if (! $online && $maxUnpaid > 0 && $request->user()->siegesNonPayesAVenir() + $seats->count() > $maxUnpaid) {
+            return back()->withInput()->with('error', __('Vous avez déjà :held siège(s) non payé(s) sur vos prochains voyages. Sans paiement, :max sièges au maximum : payez par carte pour réserver davantage.', ['held' => $request->user()->siegesNonPayesAVenir(), 'max' => $maxUnpaid]));
+        }
+
         try {
-            $reservation = DB::transaction(function () use ($request, $seat, $online) {
+            // one ticket per seat, all in the same order: all booked, or none
+            $billets = DB::transaction(function () use ($request, $seats, $online) {
                 // Lock the voyage row so two clients cannot book the same seat at the same time
                 $voyage = Voyage::with(['autocar', 'arrets'])->lockForUpdate()->findOrFail($request->voyage_id);
 
@@ -93,16 +192,20 @@ class ReservationController extends Controller
                     throw new \DomainException(__('Ce voyage est déjà parti, la réservation est impossible.'));
                 }
 
-                if (! $voyage->autocar || $seat > $voyage->autocar->nbr_siege) {
+                if (! $voyage->autocar || $seats->max() > $voyage->autocar->nbr_siege) {
                     throw new \DomainException(__("Le siège choisi n'existe pas dans cet autocar."));
                 }
 
                 // taken = sold on at least part of this segment (cancelled tickets are ignored by the global scope)
-                if (in_array($seat, $voyage->seatsTaken($depart, $arrivee), true)) {
-                    throw new \DomainException(__("Ce siège vient d'être réservé par un autre client. Veuillez en choisir un autre."));
+                $pris = $seats->intersect($voyage->seatsTaken($depart, $arrivee));
+                if ($pris->isNotEmpty()) {
+                    throw new \DomainException(trans_choice('{1} Le siège :seats vient d\'être réservé par un autre client. Veuillez en choisir un autre.|[2,*] Les sièges :seats viennent d\'être réservés par d\'autres clients. Veuillez en choisir d\'autres.', $pris->count(), ['seats' => $pris->join(', ')]));
                 }
 
-                return Reservation::create([
+                $commande = Reservation::nouvelleCommande();
+
+                return $seats->map(fn ($seat) => Reservation::create([
+                    'commande'          => $commande,
                     'num_siege'         => $seat,
                     // card payment: seat held until CMI confirms; otherwise confirmed, paid at boarding
                     'statut'            => $online ? Reservation::EN_ATTENTE : Reservation::CONFIRMEE,
@@ -123,7 +226,9 @@ class ReservationController extends Controller
                     'voyage_id'         => $voyage->id,
                     'arret_depart_id'   => $depart->id,
                     'arret_arrivee_id'  => $arrivee->id,
-                ]);
+                    // unpaid and leaving soon: no "confirm you are coming" e-mail, the client just booked
+                    'presence_confirmee_le' => ! $online && $depart->passage_at->lte(now()->addHours((int) config('safar.confirmation.demande_heures'))) ? now() : null,
+                ]));
             });
         } catch (\DomainException $e) {
             return back()->withInput()->with('error', $e->getMessage());
@@ -132,14 +237,46 @@ class ReservationController extends Controller
             return back()->withInput()->with('error', __('Une erreur est survenue lors de la réservation. Veuillez réessayer.'));
         }
 
+        $reservation = $billets->first();
+        $request->session()->forget('panier');
+
         if ($online) {
+            // one card payment for the whole order
             return redirect()->route('payment.cmi.start', $reservation);
         }
 
-        ReservationMail::sendTo($reservation, 'confirmee');
+        // one e-mail with every ticket of the order (one PDF page + QR code per seat)
+        ReservationMail::sendTo($billets, 'confirmee');
 
-        return redirect()->route('ticket.show', $reservation->id)
-            ->with('success', __('Réservation confirmée ! Votre billet vous a aussi été envoyé par e-mail.'));
+        // every ticket of the order on one page (not only the first one)
+        return redirect()->route('client.commande.show', $reservation->commande)
+            ->with('success', trans_choice('{1} Réservation confirmée ! Votre billet vous a aussi été envoyé par e-mail.|[2,*] Réservation confirmée ! Vos :count billets vous ont aussi été envoyés par e-mail.', $billets->count()));
+    }
+
+    /**
+     * Page opened by the QR code of a ticket (signed link): lets the driver or agent check it at boarding.
+     */
+    public function verify(Reservation $reservation)
+    {
+        $reservation->loadMissing(['user', 'villeDepart', 'villeArrivee', 'modeReglement', 'autocar.societe']);
+
+        return view('client.reservations.verifier', compact('reservation'));
+    }
+
+    /** "I'm coming" button of the presence e-mail (signed link, no login needed): the unpaid ticket is kept. */
+    public function presence(Reservation $reservation)
+    {
+        $etat = match (true) {
+            $reservation->isCancelled() => 'annule',
+            $reservation->departAt()->isPast() => 'parti',
+            default => 'ok',
+        };
+        if ($etat === 'ok' && $reservation->presence_confirmee_le === null) {
+            $reservation->forceFill(['presence_confirmee_le' => now()])->save();
+        }
+        $reservation->loadMissing(['villeDepart', 'villeArrivee']);
+
+        return view('client.reservations.presence', compact('reservation', 'etat'));
     }
 
     public function show($id)
@@ -187,11 +324,14 @@ class ReservationController extends Controller
             : __('Votre billet est annulé. Aucun remboursement n\'est prévu à ce délai du départ.'));
     }
 
-    /** Payment modes offered to clients: card payment only when CMI is configured. */
-    public static function availableModes()
+    /** Payment modes offered to clients: card payment only when CMI is configured (or the local test page). */
+    public static function availableModes(?\App\Models\User $user = null)
     {
+        // too many no-shows (config safar.absences_max): "pay at boarding" is no longer offered, card only
+        $cashAllowed = ! $user || $user->mayPayAtBoarding();
+
         return ModeReglement::orderBy('mode_reglement')->get()
-            ->filter(fn ($mode) => ! $mode->en_ligne || Cmi::enabled())
+            ->filter(fn ($mode) => $mode->en_ligne ? Cmi::available() : $cashAllowed)
             ->values();
     }
 

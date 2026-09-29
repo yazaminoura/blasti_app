@@ -126,6 +126,9 @@
                         <ul class="policy-links">
                             <li><a href="{{ route('pages.aide') }}">{{ __('FAQ') }}</a></li>
                             <li><a href="{{ route('contact') }}">{{ __('Contact') }}</a></li>
+                            <li><a href="{{ route('pages.legal', 'conditions') }}">{{ __('CGV') }}</a></li>
+                            <li><a href="{{ route('pages.legal', 'confidentialite') }}">{{ __('Confidentialité') }}</a></li>
+                            <li><a href="{{ route('pages.legal', 'mentions-legales') }}">{{ __('Mentions légales') }}</a></li>
                         </ul>
                     </div>
                 </div>

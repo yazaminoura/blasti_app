@@ -24,6 +24,10 @@ class Reservation extends Model
         'annulee_le' => 'datetime',
         'rembourse_le' => 'datetime',
         'rappel_envoye_le' => 'datetime',
+        'modifiee_le' => 'datetime',
+        'embarque_le' => 'datetime',
+        'confirmation_demandee_le' => 'datetime',
+        'presence_confirmee_le' => 'datetime',
     ];
 
     /**
@@ -76,6 +80,111 @@ class Reservation extends Model
         return ! $this->isCancelled() && $this->departAt()->isFuture();
     }
 
+    /**
+     * The client may move the ticket to another departure of the same trip while boarding is at least
+     * config('safar.modification_heures') hours away (not during a card payment in progress).
+     */
+    public function canBeChangedByClient(): bool
+    {
+        return ! $this->isCancelled()
+            && $this->statut !== self::EN_ATTENTE
+            && now()->diffInMinutes($this->departAt(), false) >= (int) config('safar.modification_heures') * 60;
+    }
+
+    /** Last moment the ticket can still be moved to another departure. */
+    public function changeDeadline(): \Carbon\Carbon
+    {
+        return $this->departAt()->subHours((int) config('safar.modification_heures'));
+    }
+
+    /** The controller scanned the ticket and let the traveller in. */
+    public function isBoarded(): bool
+    {
+        return $this->embarque_le !== null;
+    }
+
+    /** Unpaid ticket still waiting for the client's "I'm coming" (see config safar.confirmation). */
+    public function awaitsPresence(): bool
+    {
+        return config('safar.confirmation.active')
+            && $this->statut === self::CONFIRMEE
+            && ! $this->isPaid()
+            && $this->presence_confirmee_le === null;
+    }
+
+    /** Link of the "I'm coming" button in the e-mail (signed: works without logging in). */
+    public function presenceUrl(): string
+    {
+        return \Illuminate\Support\Facades\URL::signedRoute('ticket.presence', $this);
+    }
+
+    /** Last moment to confirm presence before the unpaid ticket is cancelled. */
+    public function presenceDeadline(): \Carbon\Carbon
+    {
+        return $this->departAt()->subHours((int) config('safar.confirmation.limite_heures'));
+    }
+
+    /** What the client really paid (tickets paid before this was stored: their price). */
+    public function montantPaye(): float
+    {
+        if (! $this->isPaid()) {
+            return 0.0;
+        }
+
+        return $this->montant_paye !== null ? (float) $this->montant_paye : $this->total();
+    }
+
+    /**
+     * Money still due at boarding: the whole price if unpaid, the supplement if a paid ticket was moved
+     * to a dearer departure. A cheaper departure is not refunded (the client is told before changing).
+     */
+    public function resteAPayer(): float
+    {
+        if ($this->isCancelled()) {
+            return 0.0;
+        }
+
+        return round(max(0, $this->total() - $this->montantPaye()), 2);
+    }
+
+    /**
+     * The tickets booked together with this one (same "commande"), this one included, by seat.
+     * Old reservations have no order: they are alone.
+     */
+    public function commandeBillets(): \Illuminate\Support\Collection
+    {
+        if (! $this->commande) {
+            return collect([$this]);
+        }
+
+        return static::withoutGlobalScope('active')->where('commande', $this->commande)->orderBy('num_siege')->get();
+    }
+
+    /** New order reference, e.g. "C7K2M9QXA". */
+    public static function nouvelleCommande(): string
+    {
+        do {
+            $code = 'C' . strtoupper(\Illuminate\Support\Str::random(9));
+        } while (static::withoutGlobalScope('active')->where('commande', $code)->exists());
+
+        return $code;
+    }
+
+    /** Link opened by the QR code of the ticket (signed: it cannot be guessed from the ticket number). */
+    public function verificationUrl(): string
+    {
+        return \Illuminate\Support\Facades\URL::signedRoute('ticket.verify', $this);
+    }
+
+    /** QR code of the ticket as an SVG data URI (works in the PDF and on the ticket page). */
+    public function qrCodeDataUri(int $size = 150): string
+    {
+        $svg = \SimpleSoftwareIO\QrCode\Facades\QrCode::format('svg')->size($size)->margin(0)->errorCorrection('M')
+            ->generate($this->verificationUrl());
+
+        return 'data:image/svg+xml;base64,' . base64_encode((string) $svg);
+    }
+
     /** What the ticket cost (price + fees). */
     public function total(): float
     {
@@ -93,9 +202,10 @@ class Reservation extends Model
         }
 
         $percent = $by === 'client' ? self::refundPercent(($at ?? now())->diffInMinutes($this->departAt(), false) / 60) : 100;
-        $amount = round($this->total() * $percent / 100, 2);
+        // refunds are based on what was really paid (a supplement still due is not refunded)
+        $amount = round($this->montantPaye() * $percent / 100, 2);
 
-        return ['pourcentage' => $percent, 'montant' => $amount, 'frais' => round($this->total() - $amount, 2)];
+        return ['pourcentage' => $percent, 'montant' => $amount, 'frais' => round($this->montantPaye() - $amount, 2)];
     }
 
     /** % refunded for a cancellation $hours before boarding (0 once the bus has left). */
@@ -140,7 +250,7 @@ class Reservation extends Model
     /** Amount to give back for a cancelled paid ticket. */
     public function amountToRefund(): float
     {
-        return $this->montant_rembourse !== null ? (float) $this->montant_rembourse : $this->total();
+        return $this->montant_rembourse !== null ? (float) $this->montant_rembourse : $this->montantPaye();
     }
 
     /** Frees the seat, fixes the refund owed (see refundQuote) and keeps the reservation in the history. */
@@ -163,6 +273,8 @@ class Reservation extends Model
         $this->forceFill([
             'statut' => self::CONFIRMEE,
             'paye_le' => $this->paye_le ?? now(),
+            // everything due is now paid (first payment, or the supplement after a change of departure)
+            'montant_paye' => $this->total(),
             'paiement_ref' => $reference ?? $this->paiement_ref,
         ])->save();
     }
@@ -186,6 +298,7 @@ class Reservation extends Model
             $this->isCancelled() && $this->rembourse_le !== null => [__('Annulée · remboursée'), 'muted'],
             $this->isCancelled() => [__('Annulée'), 'muted'],
             $this->statut === self::EN_ATTENTE => [__('Paiement en cours'), 'warning'],
+            $this->isPaid() && $this->resteAPayer() > 0 => [__('Payée · supplément :montant DH à régler', ['montant' => number_format($this->resteAPayer(), 2, ',', ' ')]), 'warning'],
             $this->isPaid() => [__('Payée'), 'success'],
             default => [__('À payer à l\'embarquement'), 'info'],
         };

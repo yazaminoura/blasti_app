@@ -7,6 +7,9 @@
 
         <title>{{ __('Mon compte') }} | BLASTI</title>
 
+        {{-- same light / dark choice as the rest of the site (applied before the page is drawn: no white flash) --}}
+        <script src="{{ asset('assets/js/theme-script.js') }}"></script>
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
@@ -43,10 +46,11 @@
     <body class="font-sans text-gray-900 antialiased">
 
 
-            <div >
+            {{-- Form in the middle on the brand background (gradient + zellige pattern, see blasti.css) --}}
+            <div class="bl-auth-bg">
+                <a href="{{ route('home') }}" class="bl-auth-home"><i class="isax isax-arrow-left-2"></i><span>{{ __('Retour à l\'accueil') }}</span></a>
                 {{ $slot }}
             </div>
-
 
             <div class="coprright-footer">
                 <p class="fs-14">&copy; {{ date('Y') }} · {{ __('Tous droits réservés') }}, <a href="{{ route('home') }}" class="text-primary fw-medium">BLASTI</a>

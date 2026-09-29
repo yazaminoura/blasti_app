@@ -25,6 +25,27 @@
     @endif
 </x-admin.page-header>
 
+{{-- setup reminders for the super admin: still the example contact details, or e-mails not really sent --}}
+@if ($me->isSuperAdmin())
+    @php
+        $todo = array_filter([
+            blank(\App\Models\Parametre::actuel()->telephone) ? ['Les coordonnées affichées aux clients sont encore des exemples.', route('admin.coordonnees.edit'), 'Mettre les vraies'] : null,
+            in_array(config('mail.default'), ['log', 'array'], true) ? ['Les e-mails (billets, rappels, confirmations) ne sont pas envoyés : aucun serveur SMTP dans .env.', route('admin.coordonnees.edit'), 'Voir comment'] : null,
+            ! \App\Support\Cmi::enabled() ? ['Le paiement par carte (CMI) n\'est pas configuré : les clients paient à l\'embarquement.', null, null] : null,
+        ]);
+    @endphp
+    @if ($todo)
+        <div class="alert alert-warning">
+            <div class="fw-semibold mb-1"><i class="bi bi-list-check"></i> Avant la mise en ligne</div>
+            <ul class="mb-0 ps-3">
+                @foreach ($todo as [$text, $link, $label])
+                    <li>{{ $text }} @if ($link)<a href="{{ $link }}" class="fw-semibold">{{ $label }}</a>@endif</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+@endif
+
 {{-- KPIs --}}
 <div class="row g-3 mb-4">
     <div class="col-xl-3 col-sm-6">

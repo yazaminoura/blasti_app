@@ -49,5 +49,13 @@
     "Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn't receive the email, we will gladly send you another.": "Merci pour votre inscription ! Avant de commencer, confirmez votre adresse e-mail en cliquant sur le lien que nous venons de vous envoyer. Vous ne l'avez pas reçu ? Nous pouvons vous en renvoyer un.",
     "This is a secure area of the application. Please confirm your password before continuing.": "Zone sécurisée : confirmez votre mot de passe pour continuer.",
     "WiFi": "Wi-Fi",
-    ":n jour|:n jours": ":n jour|:n jours"
+    ":n jour|:n jours": ":n jour|:n jours",
+    "{1} Le siège :seats vient d'être réservé par un autre client. Veuillez en choisir un autre.|[2,*] Les sièges :seats viennent d'être réservés par d'autres clients. Veuillez en choisir d'autres.": "{1} Le siège :seats vient d'être réservé par un autre client. Veuillez en choisir un autre.|[2,*] Les sièges :seats viennent d'être réservés par d'autres clients. Veuillez en choisir d'autres.",
+    "{1} Réservation confirmée ! Votre billet vous a aussi été envoyé par e-mail.|[2,*] Réservation confirmée ! Vos :count billets vous ont aussi été envoyés par e-mail.": "{1} Réservation confirmée ! Votre billet vous a aussi été envoyé par e-mail.|[2,*] Réservation confirmée ! Vos :count billets vous ont aussi été envoyés par e-mail.",
+    "{0} aucun départ|{1} :count départ|[2,*] :count départs": "{0} aucun départ|{1} :count départ|[2,*] :count départs",
+    "{0} complet|{1} :count place libre|[2,*] :count places libres": "{0} complet|{1} :count place libre|[2,*] :count places libres",
+    "{1} Votre siège|[2,*] Vos :count sièges": "{1} Votre siège|[2,*] Vos :count sièges",
+    "{1} Votre billet est prêt !|[2,*] Vos :count billets sont prêts !": "{1} Votre billet est prêt !|[2,*] Vos :count billets sont prêts !",
+    "{1} Siège :seats|[2,*] Sièges :seats": "{1} Siège :seats|[2,*] Sièges :seats",
+    "{1} Paiement accepté ! Votre billet vous a aussi été envoyé par e-mail.|[2,*] Paiement accepté ! Vos :count billets vous ont aussi été envoyés par e-mail.": "{1} Paiement accepté ! Votre billet vous a aussi été envoyé par e-mail.|[2,*] Paiement accepté ! Vos :count billets vous ont aussi été envoyés par e-mail."
 }

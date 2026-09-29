@@ -18,10 +18,21 @@ class PaymentController extends Controller
     public function start(Reservation $reservation)
     {
         abort_unless($reservation->user_id === auth()->id(), 403);
-        abort_unless(Cmi::enabled(), 404);
+        abort_unless(Cmi::available(), 404);
 
         if ($reservation->statut !== Reservation::EN_ATTENTE) {
-            return redirect()->route('ticket.show', $reservation->id);
+            return $this->toOrder($reservation);
+        }
+
+        // local PC without CMI keys: our own test page stands in for the bank's page
+        if (Cmi::testMode()) {
+            $billets = $reservation->commandeBillets()->where('statut', Reservation::EN_ATTENTE)->values();
+
+            return view('client.payment.test', [
+                'reservation' => $reservation->loadMissing(['villeDepart', 'villeArrivee']),
+                'billets' => $billets,
+                'montant' => Cmi::amount($reservation),
+            ]);
         }
 
         return view('client.payment.redirect', [
@@ -29,6 +40,38 @@ class PaymentController extends Controller
             'gateway' => Cmi::gatewayUrl(),
             'fields' => Cmi::fields($reservation),
         ]);
+    }
+
+    /** Local test page answer: "pay" confirms the whole order, "refuse" releases its seats. Local only. */
+    public function test(Request $request, Reservation $reservation)
+    {
+        abort_unless(Cmi::testMode(), 404);
+        abort_unless($reservation->user_id === auth()->id(), 403);
+
+        $pending = $reservation->commandeBillets()->where('statut', Reservation::EN_ATTENTE)->values();
+        if ($pending->isEmpty()) {
+            return $this->toOrder($reservation);
+        }
+
+        if ($request->input('resultat') !== 'ok') {
+            $pending->each->cancel('systeme');
+
+            return redirect()->route('client.reservations.show', $reservation->voyage_id)
+                ->with('error', __('Le paiement n\'a pas abouti. Aucun montant n\'a été débité ; vous pouvez réessayer.'));
+        }
+
+        $pending->each(fn ($billet) => $billet->markPaid('TEST-' . now()->format('His')));
+        ReservationMail::sendTo($pending, 'confirmee');
+
+        return $this->toOrder($reservation)->with('success', trans_choice('{1} Paiement accepté ! Votre billet vous a aussi été envoyé par e-mail.|[2,*] Paiement accepté ! Vos :count billets vous ont aussi été envoyés par e-mail.', $pending->count()));
+    }
+
+    /** Page with every ticket of the order (or the ticket itself for old reservations without order). */
+    private function toOrder(Reservation $reservation)
+    {
+        return $reservation->commande
+            ? redirect()->route('client.commande.show', $reservation->commande)
+            : redirect()->route('ticket.show', $reservation->id);
     }
 
     /** Server-to-server notification from CMI. Answers "ACTION=POSTAUTH" to accept the payment. */
@@ -47,19 +90,27 @@ class PaymentController extends Controller
             return response('APPROVED', 200)->header('Content-Type', 'text/plain'); // acknowledged, not accepted
         }
 
-        $amount = number_format((float) $reservation->prix + (float) $reservation->frais, 2, '.', '');
-        if (number_format((float) ($data['amount'] ?? 0), 2, '.', '') !== $amount) {
+        // the payment covers the whole order (every seat booked together)
+        if (number_format((float) ($data['amount'] ?? 0), 2, '.', '') !== Cmi::amount($reservation)) {
             return response('FAILURE', 200)->header('Content-Type', 'text/plain');
         }
 
-        if (! $reservation->isPaid()) {
-            if ($reservation->isCancelled()) {
-                // paid after the seat hold expired: keep it cancelled, flag the refund
-                $reservation->forceFill(['paye_le' => now(), 'paiement_ref' => $data['TransId'] ?? $data['oid']])->save();
-            } else {
-                $reservation->markPaid($data['TransId'] ?? $data['oid']);
-                ReservationMail::sendTo($reservation, 'confirmee');
+        $ref = $data['TransId'] ?? $data['oid'];
+        $confirmes = collect();
+        foreach ($reservation->commandeBillets() as $billet) {
+            if ($billet->isPaid()) {
+                continue;
             }
+            if ($billet->isCancelled()) {
+                // paid after the seat hold expired: keep it cancelled, flag the refund
+                $billet->forceFill(['paye_le' => now(), 'paiement_ref' => $ref])->save();
+            } else {
+                $billet->markPaid($ref);
+                $confirmes->push($billet);
+            }
+        }
+        if ($confirmes->isNotEmpty()) {
+            ReservationMail::sendTo($confirmes, 'confirmee');
         }
 
         return response('ACTION=POSTAUTH', 200)->header('Content-Type', 'text/plain');
@@ -74,11 +125,11 @@ class PaymentController extends Controller
         $reservation->refresh();
 
         if ($reservation->isPaid() && ! $reservation->isCancelled()) {
-            return redirect()->route('ticket.show', $reservation->id)
+            return $this->toOrder($reservation)
                 ->with('success', __('Paiement accepté ! Votre billet vous a aussi été envoyé par e-mail.'));
         }
 
-        return redirect()->route('ticket.show', $reservation->id)
+        return $this->toOrder($reservation)
             ->with('success', __('Paiement en cours de confirmation par la banque. Votre billet sera confirmé dans quelques instants.'));
     }
 
@@ -86,7 +137,8 @@ class PaymentController extends Controller
     public function fail(Request $request, Reservation $reservation)
     {
         if ($reservation->statut === Reservation::EN_ATTENTE && Cmi::enabled() && Cmi::verify($request->all())) {
-            $reservation->cancel('systeme');
+            // every seat of the order is released together
+            $reservation->commandeBillets()->where('statut', Reservation::EN_ATTENTE)->each->cancel('systeme');
         }
 
         return redirect()->route('client.reservations.show', $reservation->voyage_id)

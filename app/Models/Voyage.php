@@ -160,8 +160,11 @@ class Voyage extends Model
         return round(max(0, $b->prix - $a->prix), 2);
     }
 
-    /** Seats already sold on part of the segment [a, b): a seat left at Imouzzer is free from Imouzzer on. */
-    public function seatsTaken(VoyageArret $a, VoyageArret $b): array
+    /**
+     * Seats already sold on part of the segment [a, b): a seat left at Imouzzer is free from Imouzzer on.
+     * $exceptReservationId: a ticket being moved does not block its own seat.
+     */
+    public function seatsTaken(VoyageArret $a, VoyageArret $b, ?int $exceptReservationId = null): array
     {
         $ordre = $this->arrets->pluck('ordre', 'id');
         $lastOrdre = (int) $this->arrets->max('ordre');
@@ -170,6 +173,7 @@ class Voyage extends Model
             : $this->reservations()->get(['id', 'num_siege', 'arret_depart_id', 'arret_arrivee_id']);
 
         return $reservations
+            ->filter(fn ($r) => $r->id !== $exceptReservationId)
             ->filter(fn ($r) => ($ordre[$r->arret_depart_id] ?? 0) < $b->ordre && ($ordre[$r->arret_arrivee_id] ?? $lastOrdre) > $a->ordre)
             ->pluck('num_siege')->map(fn ($s) => (int) $s)->unique()->values()->all();
     }

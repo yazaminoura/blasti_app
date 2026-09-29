@@ -123,7 +123,9 @@
                                 <x-admin.row-actions
                                     :edit="$canUpdate ? route('voyages.edit', $voyage->id) : null"
                                     :delete="$canDelete ? route('voyages.destroy', $voyage->id) : null"
-                                    :confirm="'Supprimer le voyage ' . $voyage->villeDepart?->ville . ' → ' . $voyage->villeArrivee?->ville . ' ?'" />
+                                    :confirm="'Supprimer le voyage ' . $voyage->villeDepart?->ville . ' → ' . $voyage->villeArrivee?->ville . ' ?'">
+                                    <a href="{{ route('voyages.passagers', $voyage->id) }}" class="sa-icon-btn" title="Liste des passagers"><i class="bi bi-people"></i></a>
+                                </x-admin.row-actions>
                             </td>
                         </tr>
                     @endforeach

@@ -74,13 +74,32 @@ class ReservationController extends Controller
     /** Payment received (at the station / agency). */
     public function payer(Reservation $reservation)
     {
-        if ($reservation->isCancelled() || $reservation->isPaid()) {
+        // unpaid ticket, or supplement still due after the client moved it to a dearer departure
+        if ($reservation->isCancelled() || $reservation->resteAPayer() <= 0) {
             return back()->with('error', 'Cette réservation est déjà payée ou annulée.');
         }
 
         $reservation->markPaid('guichet');
 
         return back()->with('success', "Réservation #{$reservation->id} marquée comme payée.");
+    }
+
+    /**
+     * The controller scanned the QR code and lets the traveller in (from the ticket check page).
+     * Tickets never scanned on a bus where others were scanned count as no-shows (User::absences).
+     */
+    public function embarquer(Reservation $reservation)
+    {
+        if ($reservation->isCancelled() || $reservation->statut === Reservation::EN_ATTENTE) {
+            return back()->with('error', 'Billet non valable : embarquement refusé.');
+        }
+        if ($reservation->resteAPayer() > 0) {
+            return back()->with('error', 'Encaissez d\'abord ' . number_format($reservation->resteAPayer(), 2, ',', ' ') . ' DH.');
+        }
+
+        $reservation->forceFill(['embarque_le' => $reservation->embarque_le ?? now()])->save();
+
+        return back()->with('success', "Siège {$reservation->num_siege} : voyageur embarqué.");
     }
 
     /** Refund done for a cancelled, paid reservation. */

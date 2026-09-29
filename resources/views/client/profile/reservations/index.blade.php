@@ -162,6 +162,9 @@
                                                 @unless ($reservation->isCancelled())
                                                     <a href="{{ route('ticket.download', $reservation->id) }}" class="me-2" title="{{ __('Télécharger le billet (PDF)') }}"><i class="isax isax-document-download"></i></a>
                                                 @endunless
+                                                @if ($reservation->canBeChangedByClient())
+                                                    <a href="{{ route('client.reservations.change', $reservation->id) }}" class="me-2" title="{{ __('Modifier la date') }}"><i class="isax isax-calendar-edit"></i></a>
+                                                @endif
                                                 @if ($reservation->canBeCancelledByClient())
                                                     <form method="POST" action="{{ route('client.reservations.cancel', $reservation) }}" class="d-inline" onsubmit="return confirm(@json($reservation->cancelConfirmText()));">
                                                         @csrf

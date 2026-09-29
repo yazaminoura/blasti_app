@@ -32,6 +32,9 @@
 <!-- cursor JS -->
 <script src="{{asset('assets/js/cursor.js')}}"></script>
 
+<!-- Styled city pickers (select[data-bl-select]) -->
+<script src="{{ asset('assets/js/blasti-select.js') . '?v=' . @filemtime(public_path('assets/js/blasti-select.js')) }}"></script>
+
 <!-- Script JS -->
 <script src="{{asset('assets/js/script.js')}}"></script>
 

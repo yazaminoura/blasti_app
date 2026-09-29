@@ -72,6 +72,25 @@ class VoyageController extends Controller
         return redirect()->route('voyages.index')->with('success', 'Votre voyage a été créé avec succès.');
     }
 
+    /** Passenger list of a bus (printable): seat, name, trip, payment, boarded — for the controller / driver. */
+    public function passagers(Voyage $voyage)
+    {
+        $voyage->load(['autocar.societe', 'arrets.ville', 'villeDepart', 'villeArrivee']);
+        $billets = $voyage->reservations()
+            ->with(['user:id,name,telephone,email', 'villeDepart', 'villeArrivee', 'modeReglement'])
+            ->orderBy('num_siege')->get();
+
+        $stats = [
+            'places' => (int) $voyage->autocar?->nbr_siege,
+            'vendus' => $billets->count(),
+            'payes' => $billets->filter(fn ($b) => $b->resteAPayer() <= 0)->count(),
+            'a_encaisser' => $billets->sum(fn ($b) => $b->resteAPayer()),
+            'embarques' => $billets->filter->isBoarded()->count(),
+        ];
+
+        return view('admin.voyages.passagers', compact('voyage', 'billets', 'stats'));
+    }
+
     public function edit(Voyage $voyage)
     {
         return view('admin.voyages.edit', compact('voyage'));

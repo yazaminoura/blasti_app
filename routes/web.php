@@ -58,12 +58,24 @@ Route::get('/destinations', [\App\Http\Controllers\PageController::class, 'desti
 Route::get('/compagnies', [\App\Http\Controllers\PageController::class, 'compagnies'])->name('pages.compagnies');
 Route::get('/aide', [\App\Http\Controllers\PageController::class, 'aide'])->name('pages.aide');
 Route::get('/a-propos', [\App\Http\Controllers\PageController::class, 'aPropos'])->name('pages.apropos');
+// CGV, privacy policy, legal notice
+Route::get('/legal/{page}', [\App\Http\Controllers\PageController::class, 'legal'])->whereIn('page', ['conditions', 'confidentialite', 'mentions-legales'])->name('pages.legal');
 Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1')->name('contact.store');
 
 Route::get('/voyages/list', [VoyageController::class, 'listVoyages'])->name('voyages.list');
 // Search results (home search form): public, login is only asked when booking
 Route::get('/client/voyages', [VoyageController::class, 'clientIndex'])->name('voyages.client.index');
 Route::get('/client/societes/{societe}/showVoyageSociete', [SocieteController::class, 'showVoyageSociete'])->name('client.societes.showVoyageSociete.index');
+
+// Voyage page with the seat map: guests may look, choosing a seat opens the sign in / sign up popup
+Route::get('/client/reservations/{voyage}', [ClientReservationController::class, 'index'])->whereNumber('voyage')->name('client.reservations.show');
+Route::get('/client/create/reservation', [ClientReservationController::class, 'create'])->name('client.create.reservation');
+Route::get('/detail/voyage', [VoyageController::class, 'detail'])->name('voyage.detail');
+
+// QR code printed on each ticket: signed link, so only a real ticket opens it (for the driver / agent at boarding)
+Route::get('/billet/{reservation}/verifier', [ClientReservationController::class, 'verify'])->middleware('signed')->name('ticket.verify');
+// "I'm coming" button of the presence e-mail (unpaid tickets, see config safar.confirmation)
+Route::get('/billet/{reservation}/presence', [ClientReservationController::class, 'presence'])->middleware(['signed', 'throttle:20,1'])->name('ticket.presence');
 
 // CMI card payment: server callback + the pages the bank sends the client back to (signed by CMI, no session)
 Route::post('/paiement/cmi/callback', [PaymentController::class, 'callback'])->name('payment.cmi.callback');
@@ -101,18 +113,24 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/wishlist', [WishlistController::class, 'index'])->name('wishlist');
 
-    Route::get('/detail/voyage', [VoyageController::class, 'detail'])->name('voyage.detail');
-
-    // Réservations
-    Route::get('/client/create/reservation', [ClientReservationController::class, 'create'])->name('client.create.reservation');
-    Route::get('/client/reservations/{voyage}', [ClientReservationController::class, 'index'])->name('client.reservations.show');
-    Route::post('/client/reservations', [ClientReservationController::class, 'store'])->middleware('throttle:20,1')->name('client.reservations.store');
+    // Réservations: the seat map is public (see above), booking needs a verified email (the tickets are sent there)
+    // seat map → payment page (summary + payment choice) → booking → order page with every ticket
+    Route::post('/reservation/panier', [ClientReservationController::class, 'checkout'])->middleware('verified')->name('client.reservations.checkout');
+    Route::get('/reservation/paiement', [ClientReservationController::class, 'payment'])->middleware('verified')->name('client.reservations.payment');
+    Route::post('/client/reservations', [ClientReservationController::class, 'store'])->middleware(['verified', 'throttle:20,1'])->name('client.reservations.store');
+    Route::get('/commande/{commande}', [ClientReservationController::class, 'order'])->name('client.commande.show');
+    Route::get('/commande/{commande}/billets.pdf', [ClientReservationController::class, 'downloadOrder'])->name('client.commande.download');
+    // card payment test page (local PC without CMI keys only, see Cmi::testMode)
+    Route::post('/paiement/{reservation}/test', [PaymentController::class, 'test'])->name('payment.test');
 
     // Tickets
     Route::get('/ticket/{id}', [ClientReservationController::class, 'show'])->name('ticket.show');
     Route::get('/ticket/{id}/download', [ClientReservationController::class, 'download'])->name('ticket.download');
     Route::post('/client/reservations/{reservation}/annuler', [ClientReservationController::class, 'cancel'])->name('client.reservations.cancel');
-    Route::get('/paiement/{reservation}/cmi', [PaymentController::class, 'start'])->name('payment.cmi.start');
+    // move a ticket to another departure / seat of the same trip (until safar.modification_heures before boarding)
+    Route::get('/client/reservations/{reservation}/changer', [\App\Http\Controllers\Client\TicketChangeController::class, 'edit'])->name('client.reservations.change');
+    Route::put('/client/reservations/{reservation}/changer', [\App\Http\Controllers\Client\TicketChangeController::class, 'update'])->middleware('throttle:10,1')->name('client.reservations.change.update');
+    Route::get('/paiement/{reservation}/cmi', [PaymentController::class, 'start'])->middleware('verified')->name('payment.cmi.start');
 
     // Profil client
     Route::get('/client/profile/reservations', [ProfileReservationController::class, 'index'])->name('client.profile.reservations.index');
@@ -160,10 +178,18 @@ Route::middleware('auth')->group(function () {
         Route::delete('/reservation/admin/{reservation}', [ReservationController::class, 'destroy'])->name('reservation.admin.destroy');
         Route::patch('/reservation/admin/{reservation}/payer', [ReservationController::class, 'payer'])->name('reservation.admin.payer');
         Route::patch('/reservation/admin/{reservation}/rembourser', [ReservationController::class, 'rembourser'])->name('reservation.admin.rembourser');
+        // controller at the bus door, from the page opened by the ticket's QR code
+        Route::patch('/reservation/admin/{reservation}/embarquer', [ReservationController::class, 'embarquer'])->name('reservation.admin.embarquer');
+        // passenger list of a bus (printable), for the controller / driver
+        Route::get('/voyages/{voyage}/passagers', [VoyageController::class, 'passagers'])->name('voyages.passagers');
 
         // Logo color and name (super admin only, see AdminPermission)
         Route::get('/admin/apparence', [ApparenceController::class, 'edit'])->name('admin.apparence.edit');
         Route::put('/admin/apparence', [ApparenceController::class, 'update'])->name('admin.apparence.update');
+        // public contact details + social links (super admin only, see AdminPermission)
+        Route::get('/admin/coordonnees', [\App\Http\Controllers\Admin\CoordonneesController::class, 'edit'])->name('admin.coordonnees.edit');
+        Route::put('/admin/coordonnees', [\App\Http\Controllers\Admin\CoordonneesController::class, 'update'])->name('admin.coordonnees.update');
+        Route::post('/admin/coordonnees/test-mail', [\App\Http\Controllers\Admin\CoordonneesController::class, 'testMail'])->middleware('throttle:5,1')->name('admin.coordonnees.test-mail');
 
         // Export Excel (CSV)
         Route::get('/admin/export/reservations', [ExportController::class, 'reservations'])->name('admin.export.reservations');

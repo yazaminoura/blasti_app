@@ -52,6 +52,7 @@
             <a class="back-to-top-icon align-items-center justify-content-center d-flex"  href="#top"><i class="fa-solid fa-arrow-up"></i></a>
         </div>
         @include('layouts.scripts')
+        @include('partials.auth-modal')
 
     </body>
 </html>

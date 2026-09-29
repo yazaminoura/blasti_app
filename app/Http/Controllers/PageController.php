@@ -49,6 +49,14 @@ class PageController extends Controller
         return view('pages.aide');
     }
 
+    /** Legal pages: CGV, privacy policy, legal notice (texts in resources/views/pages/legal). */
+    public function legal(string $page)
+    {
+        abort_unless(in_array($page, ['conditions', 'confidentialite', 'mentions-legales'], true), 404);
+
+        return view('pages.legal.' . $page);
+    }
+
     public function aPropos()
     {
         $stats = [

@@ -2,12 +2,13 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-class User extends Authenticatable
+/** Sign up sends a verification link; booking needs a verified email (the ticket is sent there). */
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
@@ -84,6 +85,40 @@ class User extends Authenticatable
     public function wishlists()
     {
         return $this->hasMany(Wishlist::class);
+    }
+
+    /**
+     * No-shows: unpaid tickets whose bus has left without them being scanned — only counted on buses where
+     * the controller did scan tickets (otherwise nobody used the scan and it proves nothing).
+     */
+    public function absences(): int
+    {
+        return $this->reservations()
+            ->whereNull('paye_le')->whereNull('embarque_le')
+            ->where(fn ($q) => $q->whereDate('date_depart', '<', today())
+                ->orWhere(fn ($q) => $q->whereDate('date_depart', today())->where('heure_depart', '<', now()->format('H:i:s'))))
+            ->whereExists(fn ($q) => $q->from('reservations as scanned')
+                ->whereColumn('scanned.voyage_id', 'reservations.voyage_id')
+                ->whereNotNull('scanned.embarque_le'))
+            ->count();
+    }
+
+    /** Unpaid seats held on upcoming trips (pay at boarding). */
+    public function siegesNonPayesAVenir(): int
+    {
+        return $this->reservations()
+            ->where('statut', Reservation::CONFIRMEE)->whereNull('paye_le')
+            ->where(fn ($q) => $q->whereDate('date_depart', '>', today())
+                ->orWhere(fn ($q) => $q->whereDate('date_depart', today())->where('heure_depart', '>', now()->format('H:i:s'))))
+            ->count();
+    }
+
+    /** "Pay at boarding" is refused after too many no-shows (config safar.absences_max): card only. */
+    public function mayPayAtBoarding(): bool
+    {
+        $max = (int) config('safar.absences_max');
+
+        return $max <= 0 || $this->absences() < $max;
     }
 
     public function roles()

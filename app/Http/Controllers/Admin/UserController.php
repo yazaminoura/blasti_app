@@ -76,6 +76,8 @@ class UserController extends Controller
             'password' => \Illuminate\Support\Facades\Hash::make($request->password),
             'isadmin' => $canManageAccess && $request->boolean('isadmin') ? 1 : 0,
         ]);
+        // created by the back office: the address is trusted, no verification link needed
+        $user->forceFill(['email_verified_at' => now()])->save();
 
         if ($canManageAccess && $request->role) {
             $user->roles()->attach($request->role);

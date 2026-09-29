@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\User;
+use App\Support\RetourUrl;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -30,7 +31,12 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
         $user = Auth::user();
-        // dd(vars: $user->isadmin);
+
+        // signed in from the popup: back to the page the client was on (seat map, voyage list...)
+        if ($retour = RetourUrl::from($request)) {
+            return redirect()->to($retour)->with('success', __('Connexion réussie'));
+        }
+
         if($user->isadmin == 1){
             return redirect()->intended(route('admin', absolute: false))->with('success', __('Connexion réussie'));
         }else{

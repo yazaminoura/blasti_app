@@ -18,7 +18,7 @@
     @if (! $reservation->isCancelled())
         <a href="{{ route('ticket.download', $reservation->id) }}" class="btn btn-soft"><i class="bi bi-file-earmark-pdf"></i> Billet PDF</a>
     @endif
-    @if ($canUpdate && ! $reservation->isCancelled() && ! $reservation->isPaid())
+    @if ($canUpdate && ! $reservation->isCancelled() && $reservation->resteAPayer() > 0)
         <form action="{{ route('reservation.admin.payer', $reservation) }}" method="POST" class="d-inline">
             @csrf
             @method('PATCH')

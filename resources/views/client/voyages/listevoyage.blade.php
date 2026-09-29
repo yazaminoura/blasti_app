@@ -39,7 +39,8 @@
                                         <div class="d-flex form-info">
                                             <div class="form-item">
                                                 <label class="form-label fs-14 text-default mb-1" for="ville_depart_id">{{ __('De') }}</label>
-                                                <select class="form-select border-0 ps-0 fw-medium" id="ville_depart_id" name="ville_depart_id">
+                                                <select class="form-select border-0 ps-0 fw-medium" id="ville_depart_id" name="ville_depart_id"
+                                                        data-bl-select data-bl-icon="isax-location" data-bl-search="{{ __('Rechercher une ville') }}" data-bl-empty="{{ __('Aucune ville trouvée') }}">
                                                     <option value="">{{ __('Ville de départ') }}</option>
                                                     @foreach ($villes as $ville)
                                                         <option value="{{ $ville->id }}" @selected(($from ?? null) == $ville->id)>{{ __($ville->ville) }}</option>
@@ -47,8 +48,10 @@
                                                 </select>
                                             </div>
                                             <div class="form-item ps-2 ps-sm-3">
+                                                <button type="button" class="bl-swap" data-bl-swap="ville_depart_id,ville_arrivee_id" title="{{ __('Inverser départ et arrivée') }}" aria-label="{{ __('Inverser départ et arrivée') }}"><i class="isax isax-arrow-swap-horizontal"></i></button>
                                                 <label class="form-label fs-14 text-default mb-1" for="ville_arrivee_id">{{ __('à') }}</label>
-                                                <select class="form-select border-0 ps-0 fw-medium" id="ville_arrivee_id" name="ville_arrivee_id">
+                                                <select class="form-select border-0 ps-0 fw-medium" id="ville_arrivee_id" name="ville_arrivee_id"
+                                                        data-bl-select data-bl-icon="isax-location-tick" data-bl-search="{{ __('Rechercher une ville') }}" data-bl-empty="{{ __('Aucune ville trouvée') }}">
                                                     <option value="">{{ __('Ville d\'arrivée') }}</option>
                                                     @foreach ($villes as $ville)
                                                         <option value="{{ $ville->id }}" @selected(($to ?? null) == $ville->id)>{{ __($ville->ville) }}</option>
@@ -57,7 +60,8 @@
                                             </div>
                                             <div class="form-item">
                                                 <label class="form-label fs-14 text-default mb-1" for="date_depart">{{ __('Date de départ') }}</label>
-                                                <input type="date" class="form-control" id="date_depart" name="date_depart" value="{{ $date ?? '' }}" min="{{ now()->toDateString() }}">
+                                                <input type="date" class="form-control" id="date_depart" name="date_depart" value="{{ $date ?? '' }}" min="{{ now()->toDateString() }}"
+                                                       data-bl-date data-bl-placeholder="{{ __('Toutes les dates') }}" data-bl-clear="{{ __('Effacer') }}" data-bl-today="{{ __("Aujourd'hui") }}" data-bl-prev="{{ __('Mois précédent') }}" data-bl-next="{{ __('Mois suivant') }}">
                                             </div>
                                             
                                         </div>

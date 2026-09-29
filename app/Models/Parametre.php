@@ -6,14 +6,23 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Brand settings (a single row), edited in Admin > Paramètres > Apparence.
+ * Site settings (a single row): name + color (Admin > Paramètres > Apparence),
+ * contact details + social links (Admin > Paramètres > Coordonnées).
  * The values are copied into config('safar.*') at boot: views only read the config.
  */
 class Parametre extends Model
 {
     protected $table = 'parametres';
 
-    protected $fillable = ['nom', 'couleur'];
+    protected $fillable = ['nom', 'couleur', 'telephone', 'email', 'adresse', 'facebook', 'instagram', 'tiktok', 'x', 'linkedin'];
+
+    /** Column => config key (empty columns keep the .env / config default). */
+    public const CONFIG = [
+        'nom' => 'safar.nom', 'couleur' => 'safar.couleur',
+        'telephone' => 'safar.contact.telephone', 'email' => 'safar.contact.email', 'adresse' => 'safar.contact.adresse',
+        'facebook' => 'safar.social.facebook', 'instagram' => 'safar.social.instagram', 'tiktok' => 'safar.social.tiktok',
+        'x' => 'safar.social.x', 'linkedin' => 'safar.social.linkedin',
+    ];
 
     public static function actuel(): self
     {
@@ -34,9 +43,9 @@ class Parametre extends Model
             return;
         }
 
-        foreach (['nom', 'couleur'] as $champ) {
-            if (filled($ligne->$champ)) {
-                config(["safar.$champ" => $ligne->$champ]);
+        foreach (self::CONFIG as $champ => $cle) {
+            if (filled($ligne->$champ ?? null)) {
+                config([$cle => $ligne->$champ]);
             }
         }
     }

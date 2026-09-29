@@ -38,7 +38,8 @@ class AdminPermission
         'create' => 'create', 'store' => 'create',
         'edit' => 'update', 'update' => 'update', 'update-password' => 'update',
         'destroy' => 'delete',
-        'payer' => 'update', 'rembourser' => 'update',
+        'payer' => 'update', 'rembourser' => 'update', 'embarquer' => 'update',
+        'passagers' => 'read',
     ];
 
     /** Sections tried, in order, when a staff member without the dashboard permission logs in. */
@@ -62,7 +63,7 @@ class AdminPermission
         }
 
         // Logo color and name of the whole site
-        if (str_starts_with($routeName, 'admin.apparence.') && ! $user->isSuperAdmin()) {
+        if ((str_starts_with($routeName, 'admin.apparence.') || str_starts_with($routeName, 'admin.coordonnees.')) && ! $user->isSuperAdmin()) {
             abort(403, "Seul le super administrateur peut modifier l'apparence.");
         }
 

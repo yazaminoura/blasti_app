@@ -20,9 +20,30 @@ class Cmi
         return filled(config('services.cmi.client_id')) && filled(config('services.cmi.store_key'));
     }
 
+    /**
+     * No CMI keys yet and the app runs on a developer PC (APP_ENV=local): a clearly labelled test payment page
+     * replaces the CMI page, so the whole flow can be tried. No money moves. Never active in production.
+     */
+    public static function testMode(): bool
+    {
+        return ! self::enabled() && app()->environment('local') && (bool) config('safar.paiement_test', true);
+    }
+
+    /** Card payment can be offered to clients (real CMI, or the local test page). */
+    public static function available(): bool
+    {
+        return self::enabled() || self::testMode();
+    }
+
     public static function gatewayUrl(): string
     {
         return (string) config('services.cmi.gateway_url');
+    }
+
+    /** Amount of the whole order (its seats are booked, paid and expire together), as sent to CMI ("123.00"). */
+    public static function amount(Reservation $reservation): string
+    {
+        return number_format($reservation->commandeBillets()->sum(fn ($b) => $b->total()), 2, '.', '');
     }
 
     /** Signed form fields posted to the CMI gateway. */
@@ -31,7 +52,8 @@ class Cmi
         $user = $reservation->user;
         $fields = [
             'clientid' => (string) config('services.cmi.client_id'),
-            'amount' => number_format((float) $reservation->prix + (float) $reservation->frais, 2, '.', ''),
+            // the whole order: every seat booked together is paid in one go
+            'amount' => self::amount($reservation),
             'currency' => '504', // MAD
             'oid' => self::orderId($reservation),
             'okUrl' => route('payment.cmi.ok', $reservation),

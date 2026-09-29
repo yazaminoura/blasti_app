@@ -2,11 +2,17 @@
     $depart = \Carbon\Carbon::parse($r->date_depart)->locale(app()->getLocale())->isoFormat('dddd D MMMM YYYY');
     $heure = \Carbon\Carbon::parse($r->heure_depart)->format('H:i');
     $arrivee = __(':date à :heure', ['date' => \Carbon\Carbon::parse($r->date_arrivee)->locale(app()->getLocale())->isoFormat('D MMMM'), 'heure' => \Carbon\Carbon::parse($r->heure_arrivee)->format('H:i')]);
-    $total = number_format($r->prix + $r->frais, 2, ',', ' ') . ' DH';
+    $billets = collect($billets ?? [$r]);
+    $total = number_format($billets->sum(fn ($b) => $b->total()), 2, ',', ' ') . ' DH';
     [$title, $intro] = match ($type) {
         'rappel' => [__('Votre départ, c\'est demain'), __('Petit rappel : votre bus part demain. Présentez-vous au moins 15 minutes avant le départ avec votre billet (en pièce jointe).')],
         'annulee' => [__('Votre billet a été annulé'), __('Votre réservation a bien été annulée et le siège a été libéré.') . ($r->needsRefund() ? ' ' . __('Remboursement prévu : :montant DH (frais d\x27annulation : :frais DH). Notre équipe le traite rapidement.', ['montant' => number_format($r->amountToRefund(), 2, ',', ' '), 'frais' => number_format((float) $r->frais_annulation, 2, ',', ' ')]) : '')],
-        default => [__('Votre billet est confirmé'), __('Merci pour votre réservation ! Votre billet est en pièce jointe : présentez-le à l\'embarquement, sur votre téléphone ou imprimé.')],
+        'presence' => [__('Confirmez que vous voyagez'), __('Votre billet n\'est pas encore payé (paiement à l\'embarquement). Pour garder votre siège, confirmez que vous serez bien là en cliquant sur le bouton ci-dessous avant le :date à :heure. Sans confirmation, le billet sera annulé et le siège remis en vente.', ['date' => $r->presenceDeadline()->translatedFormat('d M'), 'heure' => $r->presenceDeadline()->format('H:i')])],
+        'sans_confirmation' => [__('Votre billet a été annulé'), __('Vous n\'avez pas confirmé votre présence à temps : ce billet non payé a été annulé et le siège remis en vente. Vous pouvez réserver à nouveau si des places sont libres.')],
+        'modifiee' => [__('Votre billet a été modifié'), __('Votre billet a bien été déplacé sur le départ ci-dessous. Votre nouveau billet est en pièce jointe : l\'ancien n\'est plus valable.') . ($r->isPaid() && $r->resteAPayer() > 0 ? ' ' . __('Supplément à régler à l\'embarquement : :montant DH.', ['montant' => number_format($r->resteAPayer(), 2, ',', ' ')]) : '')],
+        default => $billets->count() > 1
+            ? [__('Vos billets sont confirmés'), __('Merci pour votre réservation ! Vos billets sont en pièce jointe (une page et un QR code par siège) : présentez-les à l\'embarquement, sur votre téléphone ou imprimés.')]
+            : [__('Votre billet est confirmé'), __('Merci pour votre réservation ! Votre billet est en pièce jointe, avec son QR code : présentez-le à l\'embarquement, sur votre téléphone ou imprimé.')],
     };
 @endphp
 <!DOCTYPE html>
@@ -33,14 +39,29 @@
                             <div style="margin-top:6px; font-size:14px;">{{ __('Départ :') }} <strong>{{ __(':date à :heure', ['date' => ucfirst($depart), 'heure' => $heure]) }}</strong></div>
                             <div style="font-size:14px; color:#6b7280;">{{ __('Arrivée prévue :') }} {{ $arrivee }}</div>
                             <div style="margin-top:10px; font-size:14px;">
-                                {{ __('Billet') }} <strong>#{{ $r->id }}</strong> · {{ __('Siège') }} <strong>{{ __('N° :num', ['num' => $r->num_siege]) }}</strong>
+                                @if ($billets->count() > 1)
+                                    {{ __(':count billets', ['count' => $billets->count()]) }} <strong>{{ $r->commande }}</strong> · {{ __('Sièges') }} <strong>{{ $billets->pluck('num_siege')->join(', ') }}</strong>
+                                @else
+                                    {{ __('Billet') }} <strong>#{{ $r->id }}</strong> · {{ __('Siège') }} <strong>{{ __('N° :num', ['num' => $r->num_siege]) }}</strong>
+                                @endif
                                 @if ($r->autocar?->societe) · {{ $r->autocar->societe->raison_social }}@endif
                             </div>
                             <div style="font-size:14px;">{{ __('Total :') }} <strong>{{ $total }}</strong> · {{ $r->statusBadge()[0] }}</div>
                         </td></tr>
                     </table>
 
-                    @if ($type !== 'annulee')
+                    @if ($type === 'presence')
+                        <p style="margin:22px 0 0; text-align:center;">
+                            <a href="{{ $r->presenceUrl() }}" style="display:inline-block; background:#16a34a; color:#ffffff; text-decoration:none; padding:14px 26px; border-radius:8px; font-weight:bold; font-size:16px;">{{ __('Je confirme ma présence') }}</a>
+                        </p>
+                        <p style="margin:14px 0 0; font-size:12px; color:#6b7280; text-align:center;">
+                            {{ __('Vous ne voyagez plus ? Ne faites rien : le billet sera annulé automatiquement, sans frais.') }}
+                        </p>
+                    @elseif ($type === 'sans_confirmation')
+                        <p style="margin:22px 0 0; text-align:center;">
+                            <a href="{{ route('voyages.list') }}" style="display:inline-block; background:{{ $couleur }}; color:#ffffff; text-decoration:none; padding:12px 22px; border-radius:8px; font-weight:bold;">{{ __('Voir les départs') }}</a>
+                        </p>
+                    @elseif ($type !== 'annulee')
                         <p style="margin:22px 0 0; text-align:center;">
                             <a href="{{ route('ticket.show', $r->id) }}" style="display:inline-block; background:{{ $couleur }}; color:#ffffff; text-decoration:none; padding:12px 22px; border-radius:8px; font-weight:bold;">{{ __('Voir mon billet') }}</a>
                         </p>

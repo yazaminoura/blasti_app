@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\RetourUrl;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -61,6 +62,10 @@ class RegisteredUserController extends Controller
 
         Auth::login($user);
 
-        return redirect(route('home', absolute: false));
+        // the Registered event has sent the verification link; clicking it brings the client back here
+        $retour = RetourUrl::from($request) ?? route('home');
+        $request->session()->put('url.intended', $retour);
+
+        return redirect()->to($retour)->with('success', __('Compte créé ! Nous vous avons envoyé un lien de vérification à :email : cliquez dessus pour pouvoir réserver.', ['email' => $user->email]));
     }
 }

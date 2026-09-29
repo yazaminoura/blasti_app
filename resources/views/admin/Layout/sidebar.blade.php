@@ -24,6 +24,7 @@
             ['utilisateurs.read', 'admin.users.index', ['admin.users.*', 'admin.roles.*'], 'bi-shield-lock', 'Utilisateurs & rôles'],
             // null = super admin only
             [null, 'admin.apparence.edit', 'admin.apparence.*', 'bi-palette', 'Apparence'],
+            [null, 'admin.coordonnees.edit', 'admin.coordonnees.*', 'bi-telephone', 'Coordonnées'],
         ],
     ];
     $user = auth()->user();

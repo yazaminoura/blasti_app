@@ -1,6 +1,22 @@
 <x-app-layout>
     <!-- Hero Section -->
-    <section class="hero-section-four">
+    @php
+        // Background videos like mosafir.ma: every clip of public/assets/video/hero/ (≈10 s each, file name order)
+        // plays in turn with a crossfade, then the loop starts again. Horizontal and vertical clips mix: they cover the card.
+        // Without any file the drawn brand background of .hero-section-four stays.
+        $heroVideos = collect(glob(public_path('assets/video/hero/*.{mp4,webm}'), GLOB_BRACE) ?: [])
+            ->sort()->values()
+            ->map(fn ($path) => asset('assets/video/hero/' . basename($path)) . '?v=' . filemtime($path));
+    @endphp
+    <section class="hero-section-four {{ $heroVideos->isNotEmpty() ? 'has-video' : '' }}">
+        @if ($heroVideos->isNotEmpty())
+            {{-- two stacked players: the next clip loads in the hidden one, then fades in (assets/js/blasti-hero.js) --}}
+            <div class="bl-hero-videos" data-videos='@json($heroVideos)' aria-hidden="true">
+                <video class="bl-hero-video is-on" muted playsinline preload="auto"></video>
+                <video class="bl-hero-video" muted playsinline preload="auto"></video>
+            </div>
+            <span class="bl-hero-shade" aria-hidden="true"></span>
+        @endif
         <div class="container">
             <div class="hero-content">
                 <div class="row align-items-center">
@@ -60,25 +76,32 @@
                                     </div>
                                     <div class="d-lg-flex">
                                         <div class="d-flex form-info">
-                                            <div class="form-item dropdown">
-                                                <select name="ville_depart" class="form-control">
-                                                    <option value="">{{ __('Choisir une ville de départ') }}</option>
+                                            {{-- same fields as the results page (labels + real dropdown arrows) --}}
+                                            <div class="form-item">
+                                                <label class="form-label fs-14 text-default mb-1" for="home_ville_depart">{{ __('De') }}</label>
+                                                <select name="ville_depart" id="home_ville_depart" class="form-select border-0 ps-0 fw-medium"
+                                                        data-bl-select data-bl-icon="isax-location" data-bl-search="{{ __('Rechercher une ville') }}" data-bl-empty="{{ __('Aucune ville trouvée') }}">
+                                                    <option value="">{{ __('Ville de départ') }}</option>
                                                     @foreach ($villesRecherche as $ville)
                                                     <option value="{{ $ville->id }}">{{ __($ville->ville) }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div class="form-item dropdown ps-2 ps-sm-3">
-                                                <select name="ville_arrivee" class="form-control">
-                                                    <option value="">{{ __('Choisir une ville d\'arrivée') }}</option>
+                                            <div class="form-item ps-2 ps-sm-3">
+                                                <button type="button" class="bl-swap" data-bl-swap="home_ville_depart,home_ville_arrivee" title="{{ __('Inverser départ et arrivée') }}" aria-label="{{ __('Inverser départ et arrivée') }}"><i class="isax isax-arrow-swap-horizontal"></i></button>
+                                                <label class="form-label fs-14 text-default mb-1" for="home_ville_arrivee">{{ __('à') }}</label>
+                                                <select name="ville_arrivee" id="home_ville_arrivee" class="form-select border-0 ps-0 fw-medium"
+                                                        data-bl-select data-bl-icon="isax-location-tick" data-bl-search="{{ __('Rechercher une ville') }}" data-bl-empty="{{ __('Aucune ville trouvée') }}">
+                                                    <option value="">{{ __('Ville d\'arrivée') }}</option>
                                                     @foreach ($villesRecherche as $ville)
                                                     <option value="{{ $ville->id }}">{{ __($ville->ville) }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
                                             <div class="form-item">
-                                                <!-- input de date -->
-                                                <input type="date" class="form-control" id="date_depart" name="date_depart" min="{{ now()->toDateString() }}">
+                                                <label class="form-label fs-14 text-default mb-1" for="date_depart">{{ __('Date de départ') }}</label>
+                                                <input type="date" class="form-control" id="date_depart" name="date_depart" min="{{ now()->toDateString() }}"
+                                                       data-bl-date data-bl-placeholder="{{ __('Choisir une date') }}" data-bl-clear="{{ __('Effacer') }}" data-bl-today="{{ __("Aujourd'hui") }}" data-bl-prev="{{ __('Mois précédent') }}" data-bl-next="{{ __('Mois suivant') }}">
                                             </div>
                                         </div>
 
@@ -302,31 +325,48 @@
     </section>
     <!-- /Why BLASTI -->
     <!-- Client Section -->
-    <section class="section client-section-four wow zoomIn" data-wow-delay="0.2s">
-        @php
-        $societes = App\Models\Societe::has('autocars')->orderBy('raison_social')->get();
-        @endphp
+    @php
+        // partner companies with their next departures (real numbers, same as the Compagnies page)
+        $societes = App\Models\Societe::has('autocars')->with('autocars:id,societe_id')->withCount('autocars')->orderBy('raison_social')->get();
+        $departsParBus = App\Models\Voyage::bookable()->reorder()->selectRaw('autocar_id, count(*) as n')->groupBy('autocar_id')->pluck('n', 'autocar_id');
+        $societes->each(fn ($s) => $s->departs_count = $s->autocars->sum(fn ($a) => $departsParBus[$a->id] ?? 0));
+        $societes = $societes->sortByDesc('departs_count')->values();
+    @endphp
+    @if ($societes->isNotEmpty())
+    <section class="section bl-partners">
         <div class="container">
-            <div class="client-sec">
-                <div class="section-header text-center  wow fadeInDown">
-                    <h6 class="text-white">{{ __('Nos sociétés de transport partenaires') }}</h6>
+            <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4 wow fadeInUp" data-wow-delay="0.1s">
+                <div class="section-header section-header-four mb-0">
+                    <h2 class="mb-2">{!! __('Nos <span>compagnies</span> partenaires') !!}</h2>
+                    <p class="sub-title mb-0">{{ __('Des sociétés de transport identifiées : choisissez la vôtre et voyez ses prochains départs.') }}</p>
                 </div>
-                <div class="owl-carousel client-slider">
-                    @foreach ($societes as $societe)
-                    <a href="{{ route('client.societes.showVoyageSociete.index', ['societe' => $societe->id]) }}">
-                        <div class="client-img">
+                <a href="{{ route('pages.compagnies') }}" class="btn btn-outline-primary rounded-pill px-4">{{ __('Toutes les compagnies') }} <i class="isax isax-arrow-right-3 ms-1"></i></a>
+            </div>
+
+            <div class="row g-3">
+                @foreach ($societes->take(8) as $societe)
+                    <div class="col-xl-3 col-md-4 col-sm-6 wow fadeInUp" data-wow-delay="{{ 0.05 * ($loop->index % 4) }}s">
+                        <a href="{{ route('client.societes.showVoyageSociete.index', ['societe' => $societe->id]) }}" class="bl-partner">
                             @if ($societe->logo)
-                                <img src="{{ asset('storage/' . $societe->logo) }}" alt="{{ $societe->raison_social }}">
+                                <img src="{{ asset('storage/' . $societe->logo) }}" alt="{{ $societe->raison_social }}" class="bl-partner-logo">
                             @else
-                                <span class="mz-partner-name">{{ $societe->raison_social }}</span>
+                                <span class="bl-partner-logo bl-partner-initials">{{ collect(preg_split('/[\s,&-]+/u', $societe->raison_social))->filter()->take(2)->map(fn ($w) => mb_strtoupper(mb_substr($w, 0, 1)))->join('') }}</span>
                             @endif
-                        </div>
-                    </a>
-                    @endforeach
-                </div>
+                            <span class="bl-partner-body">
+                                <span class="bl-partner-name">{{ $societe->raison_social }}</span>
+                                <span class="bl-partner-meta">
+                                    @if ($societe->ville)<span><i class="isax isax-location"></i>{{ __($societe->ville) }}</span>@endif
+                                    <span><i class="isax isax-bus"></i>{{ trans_choice('{0} aucun départ|{1} :count départ|[2,*] :count départs', $societe->departs_count, ['count' => $societe->departs_count]) }}</span>
+                                </span>
+                            </span>
+                            <i class="isax isax-arrow-right-3 bl-partner-go"></i>
+                        </a>
+                    </div>
+                @endforeach
             </div>
         </div>
     </section>
+    @endif
 
     <!-- /Client Section -->
 
@@ -408,4 +448,8 @@
         color: #006ce4;
     }
 </style>
+
+    @push('scripts')
+        <script src="{{ asset('assets/js/blasti-hero.js') . '?v=' . @filemtime(public_path('assets/js/blasti-hero.js')) }}"></script>
+    @endpush
 </x-app-layout>

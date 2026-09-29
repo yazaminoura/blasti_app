@@ -32,7 +32,7 @@
                 <div class="row justify-content-center align-items-center vh-100 overflow-auto flex-wrap ">
                     <div class="col-xxl-4 col-lg-6 col-md-6 col-11 mx-auto">
                         <div class="p-4 text-center">
-                            <img src="{{ \App\Support\BrandImages::url('blasti-logo.png') }}" style="width: 170px" alt="Blasti" class="img-fluid">
+                            <img src="{{ \App\Support\BrandImages::url('blasti-logo.png') }}" style="width: 170px" alt="Blasti" class="img-fluid mz-logo-light"><img src="{{ \App\Support\BrandImages::url('blasti-logo-dark.png') }}" style="width: 170px" alt="Blasti" class="img-fluid mz-logo-dark">
                         </div>
                         <div class="card authentication-card">
                             <div class="card-header">

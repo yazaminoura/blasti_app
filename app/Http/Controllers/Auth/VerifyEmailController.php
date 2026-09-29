@@ -22,6 +22,8 @@ class VerifyEmailController extends Controller
             event(new Verified($request->user()));
         }
 
-        return redirect()->intended(route('dashboard', absolute: false).'?verified=1');
+        // back to the page where the client signed up (e.g. the seat map), else their area
+        return redirect()->intended(route('dashboard', absolute: false).'?verified=1')
+            ->with('success', __('Adresse e-mail vérifiée ! Vous pouvez maintenant réserver.'));
     }
 }

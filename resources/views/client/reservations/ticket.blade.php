@@ -30,6 +30,13 @@
                                 <div class="alert alert-warning">{{ __('Paiement en cours de confirmation par la banque. Rechargez la page dans un instant.') }}</div>
                             @elseif (! $reservation->isPaid())
                                 <div class="alert alert-info">{{ __('Billet confirmé. Le paiement (:montant DH) se fait à l\'embarquement.', ['montant' => number_format($reservation->prix + $reservation->frais, 2, ',', ' ')]) }}</div>
+                                @if ($reservation->awaitsPresence() && $reservation->departAt()->isFuture() && auth()->id() === $reservation->user_id)
+                                    {{-- unpaid: the seat is kept only if the client confirms (config safar.confirmation) --}}
+                                    <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2">
+                                        <span>{{ __('Confirmez votre présence avant le :date à :heure, sinon ce billet non payé sera annulé.', ['date' => $reservation->presenceDeadline()->translatedFormat('d M'), 'heure' => $reservation->presenceDeadline()->format('H:i')]) }}</span>
+                                        <a href="{{ $reservation->presenceUrl() }}" class="btn btn-success btn-sm">{{ __('Je confirme ma présence') }}</a>
+                                    </div>
+                                @endif
                             @endif
 
                             <!-- Main ticket title -->
@@ -68,7 +75,30 @@
                                             <p class="info-value fw-bold">{{ $reservation->num_siege }}</p>
                                         </div>
                                     </div>
+                                    @unless ($reservation->isCancelled())
+                                        <div class="col-md-6 mb-3">
+                                            <div class="info-card bg-light p-3 rounded d-flex align-items-center gap-3">
+                                                <img src="{{ $reservation->qrCodeDataUri(96) }}" width="96" height="96" alt="{{ __('QR code du billet') }}" class="bg-white p-1 rounded">
+                                                <p class="text-muted fs-13 mb-0">{{ __('Présentez ce QR code à l\'embarquement : il permet de vérifier votre billet.') }}</p>
+                                            </div>
+                                        </div>
+                                    @endunless
                                 </div>
+
+                                {{-- several seats booked together: one ticket each --}}
+                                @php $billetsCommande = $reservation->commandeBillets(); @endphp
+                                @if ($billetsCommande->count() > 1)
+                                    <div class="border rounded p-3">
+                                        <h6 class="mb-2">{{ __('Les billets de cette réservation (:count sièges)', ['count' => $billetsCommande->count()]) }}</h6>
+                                        <div class="d-flex flex-wrap gap-2">
+                                            @foreach ($billetsCommande as $billet)
+                                                <a href="{{ route('ticket.show', $billet->id) }}" class="btn btn-sm {{ $billet->is($reservation) ? 'btn-primary' : 'btn-light' }} {{ $billet->isCancelled() ? 'text-decoration-line-through' : '' }}">
+                                                    {{ __('Siège :num', ['num' => $billet->num_siege]) }}
+                                                </a>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
 
                             <!-- Passenger information -->
@@ -129,6 +159,11 @@
                             <div class="d-flex flex-wrap justify-content-center gap-2 mt-4">
                                 @if (auth()->id() === $reservation->user_id)
                                     <a href="{{ route('client.profile.reservations.index') }}" class="btn btn-light btn-lg px-4 py-2"><i class="isax isax-arrow-left-2 me-1"></i> {{ __('Mes réservations') }}</a>
+                                @endif
+                                @if (auth()->id() === $reservation->user_id && $reservation->canBeChangedByClient())
+                                    <a href="{{ route('client.reservations.change', $reservation->id) }}" class="btn btn-outline-primary btn-lg px-4 py-2">
+                                        <i class="isax isax-calendar-edit me-1"></i> {{ __('Modifier la date') }}
+                                    </a>
                                 @endif
                                 @unless ($reservation->isCancelled())
                                     <a href="{{ route('ticket.download', $reservation->id) }}" class="btn btn-primary btn-lg px-4 py-2">
