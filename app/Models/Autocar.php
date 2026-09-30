@@ -9,6 +9,13 @@ class Autocar extends Model
 {
     use HasFactory;
     protected $guarded = ['id'];
+
+    protected static function booted(): void
+    {
+        // company space (admin pages only, see App\Support\SocieteScope)
+        static::addGlobalScope('societe', \App\Support\SocieteScope::direct());
+    }
+
     public function societe(){
         return $this->belongsTo(Societe::class);
     }

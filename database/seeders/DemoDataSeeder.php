@@ -23,7 +23,8 @@ use Illuminate\Support\Facades\Hash;
  * today, clients and bookings. Runs automatically at the end of "php artisan migrate" on an empty database
  * (see the 2026_09_28_170000 migration), or by hand: php artisan db:seed --class=DemoDataSeeder
  *
- * Accounts (change the passwords before going live): admin@blasti.ma / password, clients *@example.com / password
+ * Accounts (change the passwords before going live): admin@blasti.ma / password, clients *@example.com / password,
+ * company space compagnie@blasti.ma / password (CompteCompagnieSeeder)
  */
 class DemoDataSeeder extends Seeder
 {
@@ -57,6 +58,7 @@ class DemoDataSeeder extends Seeder
     {
         // one transaction: much faster on SQLite, and all-or-nothing
         \Illuminate\Support\Facades\DB::transaction(fn () => $this->seed());
+        (new CompteCompagnieSeeder())->run();
     }
 
     private function seed(): void

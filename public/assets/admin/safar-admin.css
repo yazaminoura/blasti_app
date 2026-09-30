@@ -714,3 +714,36 @@ a { text-decoration: none; }
     .sa-collapsed .sa-sidebar .brand-logo-full .logo-on-dark { display: none !important; }
     .sa-collapsed .sa-sidebar .brand-logo-full .logo-rail { display: inline !important; }
 }
+
+/* ---------- Statistiques: 12 months bars ---------- */
+.sa-bars { display: flex; align-items: flex-end; gap: 10px; height: 220px; padding-top: 10px; }
+.sa-bar { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 6px; min-width: 0; }
+.sa-bar-fill { width: 100%; max-width: 46px; border-radius: 8px 8px 3px 3px; background: linear-gradient(180deg, var(--brand), color-mix(in srgb, var(--brand) 55%, #fff)); transition: height .3s; }
+.sa-bar:hover .sa-bar-fill { filter: brightness(1.1); }
+.sa-bar-value { font-size: .72rem; color: var(--sa-muted); white-space: nowrap; }
+.sa-bar-label { font-size: .75rem; color: var(--sa-muted); text-transform: capitalize; }
+.sa-scanner { width: 100%; max-width: 480px; margin: 0 auto; border-radius: 14px; overflow: hidden; background: #0f172a; min-height: 260px; }
+
+/* ---- Scanner: result of the last scanned ticket (green = board, orange = collect first, red = refuse) ---- */
+.sa-scan-result { padding: 1.4rem; border-width: 2px; min-height: 100%; transition: border-color .2s, background .2s; }
+.sa-scan-head { display: flex; gap: 1rem; align-items: center; }
+.sa-scan-icon { flex: none; width: 60px; height: 60px; border-radius: 16px; display: grid; place-items: center; font-size: 1.8rem;
+                background: var(--sa-bg); color: var(--sa-muted); }
+.sa-scan-title { font-size: 1.35rem; font-weight: 700; line-height: 1.25; }
+.sa-scan-text { color: var(--sa-muted); margin-top: .2rem; }
+.sa-scan-result.is-ok     { border-color: var(--sa-success); background: var(--sa-success-soft); }
+.sa-scan-result.is-payer  { border-color: var(--sa-warning); background: var(--sa-warning-soft); }
+.sa-scan-result.is-stop   { border-color: var(--sa-danger);  background: var(--sa-danger-soft); }
+.sa-scan-result.is-ok .sa-scan-icon    { background: var(--sa-success); color: #fff; }
+.sa-scan-result.is-payer .sa-scan-icon { background: var(--sa-warning); color: #fff; }
+.sa-scan-result.is-stop .sa-scan-icon  { background: var(--sa-danger);  color: #fff; }
+.sa-scan-result.is-ok .sa-scan-title    { color: var(--sa-success); }
+.sa-scan-result.is-payer .sa-scan-title { color: var(--sa-warning); }
+.sa-scan-result.is-stop .sa-scan-title  { color: var(--sa-danger); }
+.sa-scan-ticket { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem 1rem; margin: 1.2rem 0 0; padding: 1rem;
+                  border-radius: var(--sa-radius-sm); background: var(--sa-surface); border: 1px solid var(--sa-border); }
+.sa-scan-ticket dt { font-size: .75rem; text-transform: uppercase; letter-spacing: .04em; color: var(--sa-muted); font-weight: 600; }
+.sa-scan-ticket dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.sa-scan-seat { font-size: 1.5rem; line-height: 1.1; }
+.sa-scan-actions { display: grid; gap: .5rem; margin-top: 1.2rem; }
+@media (max-width: 480px) { .sa-scan-ticket { grid-template-columns: 1fr; } }

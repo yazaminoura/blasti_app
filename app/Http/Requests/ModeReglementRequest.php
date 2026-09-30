@@ -15,7 +15,7 @@ class ModeReglementRequest extends FormRequest
     /** unchecked checkbox = not an online payment mode */
     protected function prepareForValidation(): void
     {
-        $this->merge(['en_ligne' => $this->boolean('en_ligne')]);
+        $this->merge(['en_ligne' => $this->boolean('en_ligne'), 'en_agence' => $this->boolean('en_agence') && ! $this->boolean('en_ligne')]);
     }
 
     public function rules(): array
@@ -28,6 +28,7 @@ class ModeReglementRequest extends FormRequest
                 Rule::unique('mode_reglements', 'mode_reglement')->ignore($this->route('modeReglement')),
             ],
             'en_ligne' => ['boolean'],
+            'en_agence' => ['boolean'],
         ];
     }
 

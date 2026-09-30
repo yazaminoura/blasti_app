@@ -34,17 +34,19 @@
                             @endif
 
                             {{-- controller at the bus door (back-office account with the "réservations" permission) --}}
-                            @if (auth()->user()?->isadmin && auth()->user()->hasPermission('reservations.update') && ! $r->isCancelled() && $r->statut !== \App\Models\Reservation::EN_ATTENTE)
+                            @if ($controleur && auth()->user()->hasPermission('reservations.update') && ! $r->isCancelled() && $r->statut !== \App\Models\Reservation::EN_ATTENTE)
                                 <div class="bl-staff-panel mb-4">
                                     <div class="fs-12 text-uppercase text-muted mb-2"><i class="isax isax-security-user me-1"></i>{{ __('Contrôleur') }}</div>
                                     @if ($r->isBoarded())
-                                        <div class="alert alert-success mb-0"><i class="isax isax-tick-circle me-1"></i>{{ __('Embarqué à :heure', ['heure' => $r->embarque_le->format('H:i')]) }}</div>
+                                        <div class="alert alert-danger mb-0"><i class="isax isax-info-circle me-1"></i>{{ __('Déjà monté à :heure (:nom). Même billet présenté deux fois ?', ['heure' => $r->embarque_le->format('H:i'), 'nom' => $r->embarquePar?->name ?? '—']) }}</div>
                                     @else
                                         <div class="d-grid gap-2">
                                             @if ($aPayer > 0)
-                                                <form method="POST" action="{{ route('reservation.admin.payer', $r) }}">
+                                                {{-- cash or card terminal: goes into the staff member's cash drawer (table encaissements) --}}
+                                                <form method="POST" action="{{ route('reservation.admin.payer', $r) }}" class="d-grid gap-2">
                                                     @csrf @method('PATCH')
-                                                    <button class="btn btn-warning btn-lg w-100"><i class="isax isax-money-recive me-1"></i>{{ __('Encaisser :montant DH', ['montant' => number_format($aPayer, 2, ',', ' ')]) }}</button>
+                                                    <button name="mode" value="especes" class="btn btn-warning btn-lg w-100"><i class="isax isax-money-recive me-1"></i>{{ __('Encaisser :montant DH en espèces', ['montant' => number_format($aPayer, 2, ',', ' ')]) }}</button>
+                                                    <button name="mode" value="carte" class="btn btn-light btn-lg w-100"><i class="isax isax-card me-1"></i>{{ __('Encaisser :montant DH par carte (TPE)', ['montant' => number_format($aPayer, 2, ',', ' ')]) }}</button>
                                                 </form>
                                             @endif
                                             <form method="POST" action="{{ route('reservation.admin.embarquer', $r) }}">
@@ -58,7 +60,7 @@
                             @endif
 
                             <ul class="list-group list-group-flush text-start">
-                                <li class="list-group-item d-flex justify-content-between"><span class="text-muted">{{ __('Passager') }}</span><strong>{{ $r->user?->name }}</strong></li>
+                                <li class="list-group-item d-flex justify-content-between"><span class="text-muted">{{ __('Passager') }}</span><strong>{{ $r->passager() }}</strong></li>
                                 <li class="list-group-item d-flex justify-content-between"><span class="text-muted">{{ __('Trajet') }}</span><strong>{{ __($r->villeDepart?->ville) }} → {{ __($r->villeArrivee?->ville) }}</strong></li>
                                 <li class="list-group-item d-flex justify-content-between"><span class="text-muted">{{ __('Départ') }}</span><strong>{{ __(':date à :heure', ['date' => $r->departAt()->format('d/m/Y'), 'heure' => $r->departAt()->format('H:i')]) }}</strong></li>
                                 <li class="list-group-item d-flex justify-content-between"><span class="text-muted">{{ __('Siège') }}</span><strong class="fs-18">{{ $r->num_siege }}</strong></li>

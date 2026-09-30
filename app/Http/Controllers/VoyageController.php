@@ -72,6 +72,82 @@ class VoyageController extends Controller
         return redirect()->route('voyages.index')->with('success', 'Votre voyage a été créé avec succès.');
     }
 
+    /** Recurring trips: form to copy a voyage on other days (same bus, times, price and stops). */
+    public function programmer(Voyage $voyage)
+    {
+        $voyage->load(['villeDepart', 'villeArrivee', 'autocar.societe', 'arrets.ville']);
+
+        return view('admin.voyages.programmer', compact('voyage'));
+    }
+
+    /**
+     * Creates the copies: every chosen weekday between two dates (max 92 days). A day where the same bus
+     * is already on the road at that time is skipped (listed in the message), as is the voyage's own date.
+     */
+    public function programmerStore(Request $request, Voyage $voyage)
+    {
+        $data = $request->validate([
+            'du' => 'required|date|after_or_equal:today',
+            'au' => 'required|date|after_or_equal:du|before_or_equal:' . \Carbon\Carbon::parse($request->input('du', 'today'))->addDays(92)->toDateString(),
+            'jours' => 'required|array|min:1',
+            'jours.*' => 'integer|between:1,7',
+        ], [
+            'au.before_or_equal' => 'Programmez au maximum 3 mois à la fois.',
+            'jours.required' => 'Choisissez au moins un jour de la semaine.',
+            'du.after_or_equal' => 'La première date ne peut pas être dans le passé.',
+        ]);
+
+        $voyage->load('arrets');
+        $depart = $voyage->departAt();
+        $duree = $depart->diffInMinutes($voyage->arriveeAt());
+        // intermediate stops, with their hour (the day follows the departure, see Voyage::syncArrets)
+        $stops = $voyage->arrets->slice(1, -1)->values()
+            ->map(fn ($a) => ['ville_id' => $a->ville_id, 'heure' => $a->passage_at->format('H:i'), 'prix' => $a->prix])->all();
+
+        $crees = 0;
+        $occupes = [];
+        foreach (\Carbon\CarbonPeriod::create($data['du'], $data['au']) as $jour) {
+            if (! in_array($jour->dayOfWeekIso, array_map('intval', $data['jours']), true) || $jour->isSameDay($depart)) {
+                continue;
+            }
+            $debut = $jour->copy()->setTimeFrom($depart);
+            $fin = $debut->copy()->addMinutes($duree);
+            if ($debut->isPast()) {
+                continue;
+            }
+
+            // the same bus cannot do two trips at the same time
+            $conflit = Voyage::where('autocar_id', $voyage->autocar_id)
+                ->whereDate('date_depart', '>=', $debut->copy()->subDay()->toDateString())
+                ->whereDate('date_depart', '<=', $fin->toDateString())
+                ->get()
+                ->contains(fn (Voyage $v) => $v->departAt()->lt($fin) && $v->arriveeAt()->gt($debut));
+            if ($conflit) {
+                $occupes[] = $debut->format('d/m');
+                continue;
+            }
+
+            DB::transaction(function () use ($voyage, $debut, $fin, $stops) {
+                $copie = $voyage->replicate(['created_at', 'updated_at']);
+                $copie->fill([
+                    'date_depart' => $debut->toDateString(), 'heure_depart' => $debut->format('H:i:s'),
+                    'date_arrivee' => $fin->toDateString(), 'heure_arrivee' => $fin->format('H:i:s'),
+                ])->save();
+                $copie->syncArrets($stops);
+            });
+            $crees++;
+        }
+
+        $message = $crees
+            ? "{$crees} voyage(s) programmé(s) : " . $voyage->villeDepart?->ville . ' → ' . $voyage->villeArrivee?->ville . ' à ' . $depart->format('H:i') . '.'
+            : 'Aucun voyage créé pour ces dates.';
+        if ($occupes) {
+            $message .= ' Jours ignorés (autocar déjà en route) : ' . implode(', ', $occupes) . '.';
+        }
+
+        return redirect()->route('voyages.index')->with($crees ? 'success' : 'error', $message);
+    }
+
     /** Passenger list of a bus (printable): seat, name, trip, payment, boarded — for the controller / driver. */
     public function passagers(Voyage $voyage)
     {
@@ -217,6 +293,10 @@ class VoyageController extends Controller
 
     public function clientIndex(Request $request)
     {
+        // "Et le retour ?" from an order page: the return booking gets the round-trip discount
+        if ($request->filled('retour_de')) {
+            $request->session()->put('retour_de', (string) $request->input('retour_de'));
+        }
         $from = $request->integer('ville_depart') ?: null;
         $to = $request->integer('ville_arrivee') ?: null;
         $date = $request->filled('date_depart') ? $request->date('date_depart') : null;

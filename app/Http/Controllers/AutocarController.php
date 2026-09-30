@@ -32,6 +32,10 @@ class AutocarController extends Controller
             $formFields['image'] = $request->file('image')->store('autocars', 'public');
         }
 
+        // company space: a company account can only add buses to its own company
+        if (\App\Support\SocieteScope::$societeId) {
+            $formFields['societe_id'] = \App\Support\SocieteScope::$societeId;
+        }
         Autocar::create($formFields);
 
         return redirect()->route('autocars.index')->with('success', 'Votre autocar a été créé avec succès.');
@@ -53,6 +57,9 @@ class AutocarController extends Controller
             $formFields['image'] = $request->file('image')->store('autocars', 'public');
         }
 
+        if (\App\Support\SocieteScope::$societeId) {
+            $formFields['societe_id'] = \App\Support\SocieteScope::$societeId;
+        }
         $autocar->update($formFields);
 
         return redirect()->route('autocars.index')->with('success', 'Votre autocar a été modifié avec succès.');

@@ -20,7 +20,7 @@
                                         </span>
                                     @endif
                                     <div>
-                                        <h5 class="mb-1">{{ $societe->raison_social }}</h5>
+                                        <h5 class="mb-1">{{ $societe->raison_social }} <x-rating :societe="$societe->id" class="ms-1 align-middle" /></h5>
                                         <span class="fs-14 text-muted"><i class="isax isax-location me-1"></i>{{ __($societe->ville) }}</span>
                                     </div>
                                 </div>

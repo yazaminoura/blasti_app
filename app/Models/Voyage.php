@@ -237,5 +237,8 @@ class Voyage extends Model
     {
         // every voyage always has its departure and arrival stops, whatever created it (form, seeder, factory)
         static::saved(fn (self $voyage) => $voyage->syncTerminalStops());
+
+        // company space (admin pages only, see App\Support\SocieteScope)
+        static::addGlobalScope('societe', \App\Support\SocieteScope::viaAutocar());
     }
 }

@@ -12,7 +12,7 @@ use Illuminate\Validation\Rule;
 class RoleController extends Controller
 {
     /** Rows and columns of the permission grid; a permission is "<service in lowercase>.<action>". */
-    private const SERVICES = ['Dashboard', 'Utilisateurs', 'Roles', 'Villes', 'Type Voyages', 'Mode Reglements', 'Reservations', 'Voyages', 'Societes', 'Autocars', 'Equipements', 'Options'];
+    private const SERVICES = ['Dashboard', 'Utilisateurs', 'Roles', 'Villes', 'Type Voyages', 'Mode Reglements', 'Reservations', 'Voyages', 'Societes', 'Autocars', 'Equipements', 'Options', 'Promotions', 'Avis', 'Statistiques'];
     private const ACTIONS = ['read', 'create', 'update', 'delete'];
 
     public function create()

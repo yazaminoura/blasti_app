@@ -354,6 +354,7 @@
                             @endif
                             <span class="bl-partner-body">
                                 <span class="bl-partner-name">{{ $societe->raison_social }}</span>
+                                <x-rating :societe="$societe->id" />
                                 <span class="bl-partner-meta">
                                     @if ($societe->ville)<span><i class="isax isax-location"></i>{{ __($societe->ville) }}</span>@endif
                                     <span><i class="isax isax-bus"></i>{{ trans_choice('{0} aucun départ|{1} :count départ|[2,*] :count départs', $societe->departs_count, ['count' => $societe->departs_count]) }}</span>

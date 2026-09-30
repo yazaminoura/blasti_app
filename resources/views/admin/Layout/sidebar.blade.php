@@ -3,11 +3,15 @@
     $menu = [
         '' => [
             ['dashboard.read', 'admin', 'admin', 'bi-grid-1x2', 'Tableau de bord'],
+            ['statistiques.read', 'admin.statistiques', 'admin.statistiques', 'bi-bar-chart-line', 'Statistiques'],
         ],
         'Activité' => [
-            ['reservations.read', 'reservation.admin.index', 'reservation.admin.*', 'bi-ticket-perforated', 'Réservations'],
+            ['reservations.read', 'reservation.admin.index', ['reservation.admin.index', 'reservation.admin.show'], 'bi-ticket-perforated', 'Réservations'],
+            ['reservations.update', 'reservation.admin.scanner', 'reservation.admin.scanner', 'bi-qr-code-scan', 'Scanner les billets'],
             ['voyages.read', 'voyages.index', 'voyages.*', 'bi-signpost-split', 'Voyages'],
             ['utilisateurs.read', 'admin.clients.index', 'admin.clients.*', 'bi-person-lines-fill', 'Clients'],
+            ['promotions.read', 'promotions.index', 'promotions.*', 'bi-percent', 'Promotions'],
+            ['avis.read', 'avis.index', 'avis.*', 'bi-star', 'Avis'],
         ],
         'Flotte' => [
             ['societes.read', 'societes.index', 'societes.*', 'bi-buildings', 'Sociétés'],

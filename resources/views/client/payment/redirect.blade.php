@@ -17,7 +17,7 @@
     <form class="box" method="POST" action="{{ $gateway }}" id="cmi-form">
         <div class="spinner"></div>
         <h2 style="margin: 0 0 8px;">{{ __('Paiement sécurisé') }}</h2>
-        <p style="margin: 0;">{!! __('Vous allez être redirigé vers la page de paiement du CMI pour régler <strong>:montant DH</strong>.', ['montant' => e(number_format($reservation->prix + $reservation->frais, 2, ',', ' '))]) !!}</p>
+        <p style="margin: 0;">{!! __('Vous allez être redirigé vers la page de paiement du CMI pour régler <strong>:montant DH</strong>.', ['montant' => e(number_format((float) \App\Support\Cmi::amount($reservation), 2, ',', ' '))]) !!}</p>
         <small>{{ __('Votre siège est réservé pendant :minutes minutes.', ['minutes' => \App\Models\Reservation::DELAI_PAIEMENT_MINUTES]) }}</small>
         @foreach ($fields as $name => $value)
             <input type="hidden" name="{{ $name }}" value="{{ $value }}">

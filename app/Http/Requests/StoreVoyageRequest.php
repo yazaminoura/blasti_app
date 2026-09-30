@@ -57,6 +57,11 @@ class StoreVoyageRequest extends FormRequest
 
             $this->checkStops($validator, $depart, $arrivee);
 
+            // company space: only the company's own buses (the scope hides the others)
+            if (\App\Support\SocieteScope::$societeId && ! \App\Models\Autocar::whereKey($this->autocar_id)->exists()) {
+                $validator->errors()->add('autocar_id', "Cet autocar n'appartient pas à votre compagnie.");
+            }
+
             if ($voyage && (int) $this->autocar_id !== (int) $voyage->autocar_id) {
                 $highestSoldSeat = (int) $voyage->reservations()->max('num_siege');
                 $capacity = (int) \App\Models\Autocar::whereKey($this->autocar_id)->value('nbr_siege');

@@ -66,7 +66,43 @@ Artisan::command('reservations:presence', function () {
     $this->info("{$asked} demande(s) de confirmation envoyée(s), {$cancelled} billet(s) non confirmé(s) annulé(s).");
 })->purpose('Demande aux voyageurs non payés de confirmer leur présence, annule sans réponse');
 
+// The day after the trip: "how was it?" e-mail with the review button (once per ticket, trips of the last 3 days)
+Artisan::command('reservations:avis', function () {
+    $sent = 0;
+    Reservation::where('statut', Reservation::CONFIRMEE)
+        ->whereNull('avis_demande_le')
+        ->whereDate('date_arrivee', '>=', today()->subDays(3))
+        ->whereDate('date_arrivee', '<=', today())
+        ->whereDoesntHave('avis')
+        ->with('user')
+        ->each(function (Reservation $r) use (&$sent) {
+            if ($r->arriveeAt()->isPast() && ReservationMail::sendTo($r, 'avis')) {
+                $r->forceFill(['avis_demande_le' => now()])->save();
+                $sent++;
+            }
+        });
+    $this->info("{$sent} demande(s) d'avis envoyée(s).");
+})->purpose('Demande un avis aux voyageurs après leur trajet');
+
+// "Pay at an agency": the order code must be paid within config safar.agence_delai_heures, else cancelled
+Artisan::command('reservations:agence', function () {
+    $delai = (int) config('safar.agence_delai_heures');
+    $cancelled = 0;
+    Reservation::where('statut', Reservation::CONFIRMEE)->whereNull('paye_le')
+        ->whereHas('modeReglement', fn ($q) => $q->where('en_agence', true))
+        ->where('created_at', '<', now()->subHours($delai))
+        ->with('user')
+        ->each(function (Reservation $r) use (&$cancelled) {
+            $r->cancel('systeme');
+            ReservationMail::sendTo($r, 'annulee');
+            $cancelled++;
+        });
+    $this->info("{$cancelled} billet(s) non payé(s) en agence annulé(s).");
+})->purpose('Annule les billets à payer en agence non payés à temps');
+
 // Needs the Laravel scheduler on the server: "* * * * * php artisan schedule:run" (cron)
 Schedule::command('reservations:rappels')->dailyAt('18:00');
 Schedule::command('reservations:expirer')->everyFiveMinutes();
 Schedule::command('reservations:presence')->everyFifteenMinutes();
+Schedule::command('reservations:avis')->dailyAt('10:00');
+Schedule::command('reservations:agence')->everyFifteenMinutes();

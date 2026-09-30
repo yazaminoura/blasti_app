@@ -137,7 +137,13 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     public function isSuperAdmin(): bool
     {
-        return (bool) $this->isadmin && $this->roles->isEmpty();
+        // a company account (societe_id) is never super admin, even without a role
+        return (bool) $this->isadmin && $this->roles->isEmpty() && ! $this->societe_id;
+    }
+
+    public function societe()
+    {
+        return $this->belongsTo(Societe::class);
     }
 
     public function hasPermission($permission)

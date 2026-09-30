@@ -22,7 +22,7 @@ class DashboardController extends Controller
         $stats = [
             'upcoming' => $user->reservations()->whereDate('date_depart', '>=', $today)->count(),
             'done' => $user->reservations()->whereDate('date_depart', '<', $today)->count(),
-            'spent' => (float) $user->reservations()->sum(DB::raw('prix + frais')),
+            'spent' => (float) $user->reservations()->sum(DB::raw('prix + frais - remise')),
             'favorites' => $user->wishlists()->count(),
         ];
 

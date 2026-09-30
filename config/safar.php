@@ -44,6 +44,15 @@ return [
     'max_non_payes' => (int) env('SAFAR_MAX_NON_PAYES', 4),
     'absences_max' => (int) env('SAFAR_ABSENCES_MAX', 2),
 
+    // Return trip booked after an outbound order (same client, other way): % off the return (0 = no discount)
+    'remise_retour_pourcent' => (float) env('SAFAR_REMISE_RETOUR', 10),
+
+    // "Pay at an agency" mode: the order code must be paid within this many hours, else the tickets are cancelled
+    'agence_delai_heures' => (int) env('SAFAR_AGENCE_DELAI_HEURES', 24),
+
+    // Sales dashboard: platform commission on each ticket sold (% of the price)
+    'commission_pourcent' => (float) env('SAFAR_COMMISSION', 10),
+
     // The client can move a ticket to another departure of the same trip until this many hours before boarding
     'modification_heures' => (int) env('SAFAR_MODIFICATION_HEURES', 48),
 

@@ -93,7 +93,7 @@
                                         <span class="d-block fw-medium text-dark text-truncate">{{ __($r->villeDepart?->ville) }} → {{ __($r->villeArrivee?->ville) }}</span>
                                         <span class="d-block fs-13 text-muted">{{ $d($r->date_depart) }} · {{ __('siège :num', ['num' => $r->num_siege]) }}</span>
                                     </span>
-                                    <span class="fw-semibold text-dark text-nowrap">{{ number_format($r->prix + $r->frais, 0, ',', ' ') }} DH</span>
+                                    <span class="fw-semibold text-dark text-nowrap">{{ number_format($r->total(), 0, ',', ' ') }} DH</span>
                                 </a>
                             @empty
                                 <p class="text-muted text-center py-4 mb-0">{{ __('Pas encore de réservation.') }}</p>

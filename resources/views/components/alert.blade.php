@@ -1,36 +1,19 @@
-@props(['type', 'message'])
+@props(['type', 'message', 'title' => null])
 
+{{-- Flash message (session success / error / warning / info) shown as a toast, see assets/js/blasti-alert.js --}}
+@php
+    $type = in_array($type, ['success', 'error', 'warning', 'info'], true) ? $type : 'info';
+    $title ??= [
+        'success' => __('C\'est fait'),
+        'error' => __('Impossible de continuer'),
+        'warning' => __('Attention'),
+        'info' => __('Pour information'),
+    ][$type];
+@endphp
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const type = '{{ $type }}';  // Get the message type from Blade
-        const isError = type === 'error';
-
-        const Toast = Swal.mixin({
-            toast: true,
-            position: "bottom-end",
-            showConfirmButton: false,
-            background: isError ? "#a80000" : "",
-            color: isError ? "#fff" : "",
-            iconColor: isError ? "#fff" : "",
-            timer: 5000,
-            timerProgressBar: true,
-            didOpen: (toast) => {
-                toast.onmouseenter = Swal.stopTimer;
-                toast.onmouseleave = Swal.resumeTimer;
-
-                if (isError) {
-                    let progressBar = toast.querySelector('.swal2-timer-progress-bar');
-                    if (progressBar) {
-                        progressBar.style.backgroundColor = "#fff"; // White progress bar for error
-                    }
-                }
-            }
-        });
-
-        Toast.fire({
-            icon: type,
-            // titleText renders plain text (no HTML); JSON encoding keeps accents/apostrophes intact
-            titleText: @json((string) $message)
-        });
+    document.addEventListener('DOMContentLoaded', function () {
+        if (window.BlastiAlert) {
+            BlastiAlert.toast(@json($type), @json((string) $message), @json($title));
+        }
     });
 </script>

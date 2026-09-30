@@ -42,8 +42,10 @@ Rappels de départ, libération des paiements abandonnés, confirmation de prés
 
 1. **Paramètres > Coordonnées** : vrais téléphone, e-mail, adresse, réseaux sociaux ; puis « Envoyer un e-mail de test ».
 2. **Paramètres > Modes de règlement** : activer « Paiement en ligne par carte (CMI) » sur le mode Carte bancaire.
-3. **Utilisateurs & rôles** : créer un rôle « Contrôleur » avec *Réservations : lire + modifier* et *Voyages : lire*, puis les comptes des contrôleurs (ils scannent les QR codes et encaissent à la porte du bus).
-4. Faire relire les pages **CGV**, **Confidentialité** et **Mentions légales** (`/legal/...`) et déclarer le traitement à la **CNDP** (loi 09-08).
+3. **Espace compagnie** : pour chaque compagnie partenaire, créer un compte administrateur avec un rôle (ex. *Compagnie* : Voyages, Autocars, Réservations, Avis, Statistiques) et choisir sa compagnie : il ne verra que ses autocars, voyages, billets, avis et chiffres.
+4. **Utilisateurs & rôles** : créer un rôle « Contrôleur » avec *Réservations : lire + modifier* et *Voyages : lire*, puis les comptes des contrôleurs (ils scannent les QR codes et encaissent à la porte du bus).
+5. **Modes de règlement** : pour le paiement en agence (Wafacash, Cash Plus…), créer un mode avec l'option « Paiement en agence ».
+6. Faire relire les pages **CGV**, **Confidentialité** et **Mentions légales** (`/legal/...`) et déclarer le traitement à la **CNDP** (loi 09-08).
 
 ## 5. Vérifier
 

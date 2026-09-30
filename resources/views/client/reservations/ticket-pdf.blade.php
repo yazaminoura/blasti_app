@@ -102,7 +102,7 @@
                     {{-- details --}}
                     <table class="grid" width="100%">
                         <tr>
-                            <td width="50%"><div class="label">{{ __('Passager') }}</div><div class="val">{{ $r->user?->name }}</div></td>
+                            <td width="50%"><div class="label">{{ __('Passager') }}</div><div class="val">{{ $r->passager() }}</div></td>
                             <td width="50%"><div class="label">{{ __('Compagnie · autocar') }}</div><div class="val">{{ $r->autocar?->societe?->raison_social ?? '—' }}</div><div class="date">{{ __('Autocar') }} {{ $r->autocar?->matricule ?? '—' }}</div></td>
                         </tr>
                         <tr>

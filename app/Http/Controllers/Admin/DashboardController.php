@@ -20,7 +20,7 @@ class DashboardController extends Controller
 
         $thisPeriod = fn ($query) => $query->where('created_at', '>=', $thisMonth);
         $lastPeriod = fn ($query) => $query->where('created_at', '>=', $lastMonth)->where('created_at', '<', $lastMonthSoFar);
-        $revenue = fn ($query) => (float) $query->sum(\Illuminate\Support\Facades\DB::raw('prix + frais'));
+        $revenue = fn ($query) => (float) $query->sum(\Illuminate\Support\Facades\DB::raw('prix + frais - remise'));
 
         // ---- KPI cards (value + evolution this month vs the same days of last month) ----
         $clients = fn () => User::where('isadmin', 0);

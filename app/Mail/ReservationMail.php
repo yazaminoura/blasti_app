@@ -25,7 +25,7 @@ class ReservationMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public const TYPES = ['confirmee', 'rappel', 'annulee', 'modifiee', 'presence', 'sans_confirmation'];
+    public const TYPES = ['confirmee', 'rappel', 'annulee', 'modifiee', 'presence', 'sans_confirmation', 'avis'];
 
     /** Every ticket covered by this e-mail (several seats booked together = one e-mail, one PDF page each). */
     public \Illuminate\Support\Collection $billets;
@@ -71,6 +71,7 @@ class ReservationMail extends Mailable
             'rappel' => __('Rappel : votre bus :trajet part demain | :brand', ['trajet' => $trajet, 'brand' => $brand]),
             'annulee' => __('Billet #:id annulé | :brand', ['id' => $this->reservation->id, 'brand' => $brand]),
             'modifiee' => __('Billet #:id modifié : :trajet | :brand', ['id' => $this->reservation->id, 'trajet' => $trajet, 'brand' => $brand]),
+            'avis' => __('Comment s\'est passé votre voyage :trajet ? | :brand', ['trajet' => $trajet, 'brand' => $brand]),
             'presence' => __('Action requise : confirmez votre voyage :trajet | :brand', ['trajet' => $trajet, 'brand' => $brand]),
             'sans_confirmation' => __('Billet #:id annulé (présence non confirmée) | :brand', ['id' => $this->reservation->id, 'brand' => $brand]),
             default => $this->billets->count() > 1
@@ -93,7 +94,7 @@ class ReservationMail extends Mailable
     public function attachments(): array
     {
         // only tickets that are still valid get the PDF
-        if (in_array($this->type, ['annulee', 'presence', 'sans_confirmation'], true)) {
+        if (in_array($this->type, ['annulee', 'presence', 'sans_confirmation', 'avis'], true)) {
             return [];
         }
 

@@ -42,7 +42,8 @@
                         <tr>
                             <td class="sa-num sa-strong fs-5">{{ $b->num_siege }}</td>
                             <td>
-                                <div class="sa-strong">{{ $b->user?->name }}</div>
+                                <div class="sa-strong">{{ $b->passager() }}</div>
+                                @if ($b->passager() !== $b->user?->name)<div class="sa-sub">réservé par {{ $b->user?->name }}</div>@endif
                                 <div class="sa-sub">{{ $b->user?->telephone ?: $b->user?->email }}</div>
                             </td>
                             <td>

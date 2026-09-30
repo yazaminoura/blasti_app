@@ -3,9 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Mail\ReservationMail;
+use App\Models\Encaissement;
 use App\Models\ModeReglement;
 use App\Models\Reservation;
+use App\Models\Scan;
 use App\Models\Ville;
+use App\Models\Voyage;
+use App\Support\Controle;
 use Illuminate\Http\Request;
 
 /**
@@ -28,7 +32,7 @@ class ReservationController extends Controller
 
         $totals = [
             'count'   => (clone $query)->count(),
-            'revenue' => (clone $query)->sum('prix') + (clone $query)->sum('frais'),
+            'revenue' => (clone $query)->sum('prix') + (clone $query)->sum('frais') - (clone $query)->sum('remise'),
         ];
 
         $reservations = $query
@@ -49,7 +53,7 @@ class ReservationController extends Controller
 
     public function show(Reservation $reservation)
     {
-        $reservation->load(['user', 'villeDepart', 'villeArrivee', 'modeReglement', 'typeVoyage', 'autocar.societe', 'voyage']);
+        $reservation->load(['user', 'villeDepart', 'villeArrivee', 'modeReglement', 'typeVoyage', 'autocar.societe', 'voyage', 'embarquePar', 'encaissements.user', 'scans.user']);
 
         return view('admin.reservations.show', compact('reservation'));
     }
@@ -71,35 +75,109 @@ class ReservationController extends Controller
                 . ($reservation->isPaid() ? ' Pensez au remboursement.' : ''));
     }
 
-    /** Payment received (at the station / agency). */
-    public function payer(Reservation $reservation)
+    /**
+     * Controller at the bus door: camera QR scanner or a ticket number typed by hand. The page stays open and
+     * checks each ticket in place (see scan()); choosing the bus being checked turns on the "wrong bus" check.
+     */
+    public function scanner(Request $request)
     {
+        // without JavaScript: ?billet=125 opens the ticket check page
+        if ($request->filled('billet')) {
+            $billet = Reservation::withoutGlobalScope('active')->find($request->integer('billet'));
+
+            return $billet
+                ? redirect()->to($billet->verificationUrl())
+                : back()->with('error', 'Aucun billet n° ' . $request->integer('billet') . ' (ou il appartient à une autre compagnie).');
+        }
+
+        $voyages = Voyage::with(['villeDepart', 'villeArrivee', 'autocar'])
+            ->whereDate('date_depart', '>=', today()->subDay())->whereDate('date_depart', '<=', today()->addDay())
+            ->orderBy('date_depart')->orderBy('heure_depart')->get();
+        $bus = $request->filled('voyage') ? $voyages->firstWhere('id', $request->integer('voyage')) : null;
+
+        return view('admin.reservations.scanner', [
+            'voyages' => $voyages,
+            'bus' => $bus,
+            'stats' => Controle::stats($bus, $request->user()),
+        ]);
+    }
+
+    /** One scan (JSON for the scanner page): reads the code, checks the ticket, logs the scan. */
+    public function scan(Request $request)
+    {
+        $data = $request->validate(['code' => 'required|string|max:2000', 'voyage' => 'nullable|integer']);
+        $bus = ! empty($data['voyage']) ? Voyage::find($data['voyage']) : null;
+        $user = $request->user();
+
+        $numero = Controle::numeroDuCode($data['code']);
+        // the company scope hides other companies' tickets: same answer as an unknown number
+        $reservation = $numero ? Reservation::withoutGlobalScope('active')->find($numero) : null;
+
+        if (! $reservation) {
+            Scan::create(['user_id' => $user->id, 'voyage_id' => $bus?->id, 'resultat' => $numero ? 'introuvable' : 'illisible']);
+
+            return response()->json([
+                'verdict' => [
+                    'code' => $numero ? 'introuvable' : 'illisible', 'ton' => 'stop',
+                    'titre' => $numero ? 'Billet introuvable' : 'QR code non reconnu',
+                    'texte' => $numero ? "Aucun billet n° {$numero} (ou il appartient à une autre compagnie)." : 'Ce n\'est pas un billet ' . config('safar.nom') . ', ou le lien a été modifié.',
+                ],
+                'billet' => null,
+                'stats' => Controle::stats($bus, $user),
+            ]);
+        }
+
+        return response()->json(Controle::fiche($reservation, Controle::noter($reservation, $user, $bus), $bus, $user));
+    }
+
+    /** Payment received at the station / agency or by the controller (cash or card terminal). */
+    public function payer(Request $request, Reservation $reservation)
+    {
+        $mode = $request->validate(['mode' => 'nullable|in:' . implode(',', array_keys(Encaissement::MODES))])['mode'] ?? 'especes';
+
         // unpaid ticket, or supplement still due after the client moved it to a dearer departure
         if ($reservation->isCancelled() || $reservation->resteAPayer() <= 0) {
             return back()->with('error', 'Cette réservation est déjà payée ou annulée.');
         }
 
-        $reservation->markPaid('guichet');
+        $montant = $reservation->encaisser($request->user(), $mode);
 
-        return back()->with('success', "Réservation #{$reservation->id} marquée comme payée.");
+        return back()->with('success', "Réservation #{$reservation->id} : " . Controle::dh($montant) . ' DH encaissés (' . Encaissement::MODES[$mode] . ').');
     }
 
     /**
-     * The controller scanned the QR code and lets the traveller in (from the ticket check page).
-     * Tickets never scanned on a bus where others were scanned count as no-shows (User::absences).
+     * The controller lets the traveller in (scanner page or ticket check page). With "mode", the money still
+     * due is collected in the same click. Tickets never scanned on a bus where others were scanned count as
+     * no-shows (User::absences).
      */
-    public function embarquer(Reservation $reservation)
+    public function embarquer(Request $request, Reservation $reservation)
     {
-        if ($reservation->isCancelled() || $reservation->statut === Reservation::EN_ATTENTE) {
-            return back()->with('error', 'Billet non valable : embarquement refusé.');
-        }
-        if ($reservation->resteAPayer() > 0) {
-            return back()->with('error', 'Encaissez d\'abord ' . number_format($reservation->resteAPayer(), 2, ',', ' ') . ' DH.');
+        $data = $request->validate([
+            'mode' => 'nullable|in:' . implode(',', array_keys(Encaissement::MODES)),
+            'voyage' => 'nullable|integer',
+        ]);
+        $bus = ! empty($data['voyage']) ? Voyage::find($data['voyage']) : null;
+        $user = $request->user();
+
+        $verdict = Controle::verdict($reservation, $bus);
+        $erreur = match (true) {
+            $verdict['ton'] === 'stop' => $verdict['titre'] . ' : ' . $verdict['texte'],
+            $verdict['ton'] === 'payer' && empty($data['mode']) => 'Encaissez d\'abord ' . Controle::dh($reservation->resteAPayer()) . ' DH.',
+            default => null,
+        };
+        if ($erreur) {
+            return $request->expectsJson()
+                ? response()->json(['erreur' => $erreur] + Controle::fiche($reservation, $verdict, $bus, $user), 422)
+                : back()->with('error', $erreur);
         }
 
-        $reservation->forceFill(['embarque_le' => $reservation->embarque_le ?? now()])->save();
+        $encaisse = ! empty($data['mode']) ? $reservation->encaisser($user, $data['mode']) : 0;
+        $reservation->embarquer($user);
+        $message = "Siège {$reservation->num_siege} : voyageur embarqué" . ($encaisse > 0 ? ' · ' . Controle::dh($encaisse) . ' DH encaissés.' : '.');
 
-        return back()->with('success', "Siège {$reservation->num_siege} : voyageur embarqué.");
+        return $request->expectsJson()
+            ? response()->json(['message' => $message] + Controle::fiche($reservation->refresh(), Controle::verdict($reservation, $bus), $bus, $user))
+            : back()->with('success', $message);
     }
 
     /** Refund done for a cancelled, paid reservation. */

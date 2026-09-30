@@ -51,7 +51,8 @@ class UserController extends Controller
     public function create()
     {
         $roles = \App\Models\Role::all();
-        return view('admin.users.create', compact('roles'));
+        $societes = \App\Models\Societe::orderBy('raison_social')->get(['id', 'raison_social']);
+        return view('admin.users.create', compact('roles', 'societes'));
     }
 
     /**
@@ -65,6 +66,7 @@ class UserController extends Controller
             'password' => 'required|string|min:8|confirmed',
             'role' => 'nullable|exists:roles,id',
             'isadmin' => 'nullable|boolean',
+            'societe_id' => 'nullable|exists:societes,id',
         ]);
 
         // Only a super admin may create back-office accounts or give roles
@@ -82,6 +84,10 @@ class UserController extends Controller
         if ($canManageAccess && $request->role) {
             $user->roles()->attach($request->role);
         }
+        // company space: this back-office account only sees one transport company
+        if ($canManageAccess && $user->isadmin) {
+            $user->forceFill(['societe_id' => $request->input('societe_id') ?: null])->save();
+        }
 
         return redirect()->route('admin.users.index')->with('success', 'Utilisateur créé avec succès.');
     }
@@ -95,8 +101,9 @@ class UserController extends Controller
 
         $roles = \App\Models\Role::all();
         $canManageAccess = auth()->user()->isSuperAdmin();
+        $societes = \App\Models\Societe::orderBy('raison_social')->get(['id', 'raison_social']);
 
-        return view('admin.users.edit', compact('user', 'roles', 'canManageAccess'));
+        return view('admin.users.edit', compact('user', 'roles', 'canManageAccess', 'societes'));
     }
 
     /**
@@ -111,6 +118,7 @@ class UserController extends Controller
             'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
             'role' => 'nullable|exists:roles,id',
             'isadmin' => 'nullable|boolean',
+            'societe_id' => 'nullable|exists:societes,id',
         ]);
 
         // Access rights (admin flag + role) can only be changed by a super admin; checked before saving anything
@@ -130,6 +138,10 @@ class UserController extends Controller
         if ($canManageAccess) {
             $user->update(['isadmin' => $isAdmin ? 1 : 0]);
             $user->roles()->sync($roleIds);
+            // company space (never on your own account: you would lose the super admin rights)
+            if (! $user->is(auth()->user())) {
+                $user->forceFill(['societe_id' => $isAdmin ? ($request->input('societe_id') ?: null) : null])->save();
+            }
         }
 
         return redirect()->route('admin.users.index')->with('success', 'Utilisateur mis à jour avec succès.');

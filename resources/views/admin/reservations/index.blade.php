@@ -81,7 +81,7 @@
         <x-admin.stat label="Réservations trouvées" :value="number_format($totals['count'], 0, ',', ' ')" icon="bi-ticket-perforated" />
     </div>
     <div class="col-sm-6">
-        <x-admin.stat label="Chiffre d'affaires (prix + frais)" :value="number_format($totals['revenue'], 2, ',', ' ') . ' DH'" icon="bi-cash-stack" tone="success" />
+        <x-admin.stat label="Chiffre d'affaires (après remises)" :value="number_format($totals['revenue'], 2, ',', ' ') . ' DH'" icon="bi-cash-stack" tone="success" />
     </div>
 </div>
 
@@ -135,7 +135,7 @@
                                 <span class="sa-chip {{ $tone }} dot">{{ $badge }}</span>
                                 <div class="sa-sub mt-1">{{ $reserva->modeReglement?->mode_reglement ?? '—' }}</div>
                             </td>
-                            <td class="text-end sa-num sa-strong text-nowrap">{{ number_format($reserva->prix + $reserva->frais, 2, ',', ' ') }} DH</td>
+                            <td class="text-end sa-num sa-strong text-nowrap">{{ number_format($reserva->total(), 2, ',', ' ') }} DH</td>
                             <td class="text-end">
                                 <x-admin.row-actions :show="route('reservation.admin.show', $reserva->id)"
                                     :delete="$canCancel && ! $reserva->isCancelled() ? route('reservation.admin.destroy', $reserva->id) : null"

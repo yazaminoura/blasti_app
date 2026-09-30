@@ -35,9 +35,26 @@
                     </p>
                 </div>
                 @if ($actifs->isNotEmpty())
-                    <a href="{{ route('client.commande.download', $commande) }}" class="btn btn-light rounded-pill px-4 fw-semibold"><i class="isax isax-document-download me-1"></i>{{ $actifs->count() > 1 ? __('Tous les billets (PDF)') : __('Billet (PDF)') }}</a>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ \App\Support\WhatsApp::lien($actifs) }}" target="_blank" rel="noopener" class="btn bl-btn-whatsapp rounded-pill px-4 fw-semibold"><i class="fab fa-whatsapp me-1"></i>{{ __('Envoyer sur WhatsApp') }}</a>
+                        <a href="{{ route('client.commande.download', $commande) }}" class="btn btn-light rounded-pill px-4 fw-semibold"><i class="isax isax-document-download me-1"></i>{{ $actifs->count() > 1 ? __('Tous les billets (PDF)') : __('Billet (PDF)') }}</a>
+                    </div>
                 @endif
             </div>
+
+            {{-- agency payment: the code to give at the payment point, before the deadline (reservations:agence) --}}
+            @if ($aPayer > 0 && $first->modeReglement?->en_agence && ! $first->isPaid())
+                @php $limite = $first->created_at->copy()->addHours((int) config('safar.agence_delai_heures')); @endphp
+                <div class="bl-agency-code mt-3">
+                    <div>
+                        <div class="fs-13 text-uppercase text-muted">{{ __('Votre code de paiement') }}</div>
+                        <div class="bl-agency-code-value">{{ $commande }}</div>
+                    </div>
+                    <div class="flex-fill fs-14">
+                        {{ __('Présentez ce code dans un point de paiement (Wafacash, Cash Plus, agence :brand) et payez :montant avant le :date à :heure. Sans paiement, les billets seront annulés automatiquement.', ['brand' => config('safar.nom'), 'montant' => $dh($aPayer), 'date' => $limite->translatedFormat('d M'), 'heure' => $limite->format('H:i')]) }}
+                    </div>
+                </div>
+            @endif
 
             {{-- one card per seat --}}
             <div class="row g-3 mt-1">
@@ -49,6 +66,7 @@
                                 <div>
                                     <div class="fs-12 text-muted text-uppercase">{{ __('Siège') }}</div>
                                     <div class="bl-ticket-seat">{{ $billet->num_siege }}</div>
+                                    <div class="fw-semibold">{{ $billet->passager() }}</div>
                                     <div class="fs-13 text-muted">{{ __('Billet N° :id', ['id' => $billet->id]) }}</div>
                                     <span class="badge bg-{{ $tone }}-transparent text-{{ $tone }} mt-2">{{ $badge }}</span>
                                 </div>
@@ -69,6 +87,29 @@
                     </div>
                 @endforeach
             </div>
+
+            {{-- round trip: book the return right away (discount config safar.remise_retour_pourcent) --}}
+            @if ($actifs->isNotEmpty() && ! $first->retour_de && $first->departAt()->isFuture())
+                @php $remiseRetour = (float) config('safar.remise_retour_pourcent'); @endphp
+                <form method="GET" action="{{ route('voyages.client.index') }}" class="bl-return-card mt-4">
+                    <input type="hidden" name="ville_depart" value="{{ $first->ville_arrivee_id }}">
+                    <input type="hidden" name="ville_arrivee" value="{{ $first->ville_depart_id }}">
+                    <input type="hidden" name="retour_de" value="{{ $commande }}">
+                    <span class="bl-return-icon"><i class="isax isax-arrow-2"></i></span>
+                    <div class="flex-fill">
+                        <h5 class="mb-1">{{ __('Et le retour ?') }}</h5>
+                        <p class="mb-0 text-muted fs-14">
+                            {{ __($first->villeArrivee?->ville) }} → {{ __($first->villeDepart?->ville) }}
+                            @if ($remiseRetour > 0) · <strong class="text-success">{{ __(':p % de réduction sur le billet retour', ['p' => rtrim(rtrim(number_format($remiseRetour, 2, ',', ''), '0'), ',')]) }}</strong>@endif
+                        </p>
+                    </div>
+                    <div class="bl-return-date">
+                        <input type="date" name="date_depart" class="form-control" min="{{ \Carbon\Carbon::parse($first->date_arrivee)->toDateString() }}" required
+                               data-bl-date data-bl-placeholder="{{ __('Date du retour') }}" data-bl-clear="{{ __('Effacer') }}" data-bl-today="{{ __("Aujourd'hui") }}" data-bl-prev="{{ __('Mois précédent') }}" data-bl-next="{{ __('Mois suivant') }}">
+                    </div>
+                    <button class="btn btn-primary rounded-pill px-4">{{ __('Voir les départs') }}</button>
+                </form>
+            @endif
 
             <div class="text-center mt-4">
                 <a href="{{ route('client.profile.reservations.index') }}" class="btn btn-outline-primary rounded-pill px-4">{{ __('Mes réservations') }}</a>

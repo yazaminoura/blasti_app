@@ -59,7 +59,7 @@
                     <div class="card-body p-4 d-flex flex-column h-100">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
-                                <h5 class="card-title fw-bold text-dark mb-1">{{ $voyage->autocar->societe->raison_social }}</h5>
+                                <h5 class="card-title fw-bold text-dark mb-1">{{ $voyage->autocar->societe->raison_social }} <x-rating :societe="$voyage->autocar->societe_id" class="ms-1 align-middle" /></h5>
                                 <div class="text-muted fs-12">{{ __('Matricule : :matricule', ['matricule' => $voyage->autocar->matricule]) }}</div>
                             </div>
                             <div class="text-end">

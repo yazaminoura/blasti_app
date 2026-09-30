@@ -20,9 +20,13 @@
                                     <div class="alert alert-success fs-14">{{ __('Un nouveau lien de vérification vient de vous être envoyé.') }}</div>
                                 @endif
 
+                                @php $boiteMail = \App\Support\Mailbox::for(auth()->user()->email); @endphp
+                                @if ($boiteMail)
+                                    <a href="{{ $boiteMail['url'] }}" target="_blank" rel="noopener" class="btn btn-xl btn-primary w-100 mb-2"><i class="isax isax-sms me-1"></i>{{ __('Ouvrir :boite', ['boite' => $boiteMail['nom']]) }}</a>
+                                @endif
                                 <form method="POST" action="{{ route('verification.send') }}" class="mb-3">
                                     @csrf
-                                    <button type="submit" class="btn btn-xl btn-primary w-100">{{ __('Renvoyer le lien de vérification') }}</button>
+                                    <button type="submit" class="btn btn-xl {{ $boiteMail ? 'btn-light' : 'btn-primary' }} w-100">{{ __('Renvoyer le lien de vérification') }}</button>
                                 </form>
 
                                 <div class="d-flex justify-content-between align-items-center fs-14">

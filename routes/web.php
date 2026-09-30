@@ -69,12 +69,16 @@ Route::get('/client/societes/{societe}/showVoyageSociete', [SocieteController::c
 
 // Voyage page with the seat map: guests may look, choosing a seat opens the sign in / sign up popup
 Route::get('/client/reservations/{voyage}', [ClientReservationController::class, 'index'])->whereNumber('voyage')->name('client.reservations.show');
+// full bus: "Prévenez-moi" e-mail when a seat frees up
+Route::post('/client/reservations/{voyage}/alerte', [ClientReservationController::class, 'alerte'])->whereNumber('voyage')->middleware('throttle:10,1')->name('client.reservations.alerte');
 Route::get('/client/create/reservation', [ClientReservationController::class, 'create'])->name('client.create.reservation');
 Route::get('/detail/voyage', [VoyageController::class, 'detail'])->name('voyage.detail');
 
 // QR code printed on each ticket: signed link, so only a real ticket opens it (for the driver / agent at boarding)
 Route::get('/billet/{reservation}/verifier', [ClientReservationController::class, 'verify'])->middleware('signed')->name('ticket.verify');
 // "I'm coming" button of the presence e-mail (unpaid tickets, see config safar.confirmation)
+// ticket PDF from the link shared on WhatsApp (signed, valid until 2 days after the trip)
+Route::get('/billet/{reservation}/pdf', [ClientReservationController::class, 'sharedPdf'])->middleware(['signed', 'throttle:30,1'])->name('ticket.pdf.partage');
 Route::get('/billet/{reservation}/presence', [ClientReservationController::class, 'presence'])->middleware(['signed', 'throttle:20,1'])->name('ticket.presence');
 
 // CMI card payment: server callback + the pages the bank sends the client back to (signed by CMI, no session)
@@ -117,6 +121,7 @@ Route::middleware('auth')->group(function () {
     // seat map → payment page (summary + payment choice) → booking → order page with every ticket
     Route::post('/reservation/panier', [ClientReservationController::class, 'checkout'])->middleware('verified')->name('client.reservations.checkout');
     Route::get('/reservation/paiement', [ClientReservationController::class, 'payment'])->middleware('verified')->name('client.reservations.payment');
+    Route::post('/reservation/promo', [ClientReservationController::class, 'promo'])->middleware(['verified', 'throttle:20,1'])->name('client.reservations.promo');
     Route::post('/client/reservations', [ClientReservationController::class, 'store'])->middleware(['verified', 'throttle:20,1'])->name('client.reservations.store');
     Route::get('/commande/{commande}', [ClientReservationController::class, 'order'])->name('client.commande.show');
     Route::get('/commande/{commande}/billets.pdf', [ClientReservationController::class, 'downloadOrder'])->name('client.commande.download');
@@ -128,6 +133,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/ticket/{id}/download', [ClientReservationController::class, 'download'])->name('ticket.download');
     Route::post('/client/reservations/{reservation}/annuler', [ClientReservationController::class, 'cancel'])->name('client.reservations.cancel');
     // move a ticket to another departure / seat of the same trip (until safar.modification_heures before boarding)
+    // review of a finished trip (one per ticket)
+    Route::get('/client/reservations/{reservation}/avis', [\App\Http\Controllers\Client\AvisController::class, 'create'])->name('client.avis.create');
+    Route::post('/client/reservations/{reservation}/avis', [\App\Http\Controllers\Client\AvisController::class, 'store'])->middleware('throttle:10,1')->name('client.avis.store');
     Route::get('/client/reservations/{reservation}/changer', [\App\Http\Controllers\Client\TicketChangeController::class, 'edit'])->name('client.reservations.change');
     Route::put('/client/reservations/{reservation}/changer', [\App\Http\Controllers\Client\TicketChangeController::class, 'update'])->middleware('throttle:10,1')->name('client.reservations.change.update');
     Route::get('/paiement/{reservation}/cmi', [PaymentController::class, 'start'])->middleware('verified')->name('payment.cmi.start');
@@ -171,9 +179,19 @@ Route::middleware('auth')->group(function () {
         Route::resource('autocarequipements', AutocarEquipementController::class)->except('show');
         Route::resource('options', OptionController::class)->except('show');
         Route::resource('equipements', EquipementController::class)->except('show');
+        Route::resource('promotions', \App\Http\Controllers\Admin\PromotionController::class)->except('show');
+        // sales dashboard (by company, route, month)
+        Route::get('/admin/statistiques', [\App\Http\Controllers\Admin\StatistiquesController::class, 'index'])->name('admin.statistiques');
+        // reviews moderation
+        Route::get('/admin/avis', [\App\Http\Controllers\Admin\AvisController::class, 'index'])->name('avis.index');
+        Route::patch('/admin/avis/{avis}/publier', [\App\Http\Controllers\Admin\AvisController::class, 'publier'])->name('avis.publier');
+        Route::delete('/admin/avis/{avis}', [\App\Http\Controllers\Admin\AvisController::class, 'destroy'])->name('avis.destroy');
 
         // Réservations admin
         Route::get('/reservation/admin/list', [ReservationController::class, 'indexAdmin'])->name('reservation.admin.index');
+        Route::get('/reservation/admin/scanner', [ReservationController::class, 'scanner'])->name('reservation.admin.scanner');
+        // one ticket checked from the scanner page (JSON): logged in the scans table
+        Route::post('/reservation/admin/scanner', [ReservationController::class, 'scan'])->middleware('throttle:120,1')->name('reservation.admin.scan');
         Route::get('/reservation/admin/{reservation}/show', [ReservationController::class, 'show'])->name('reservation.admin.show');
         Route::delete('/reservation/admin/{reservation}', [ReservationController::class, 'destroy'])->name('reservation.admin.destroy');
         Route::patch('/reservation/admin/{reservation}/payer', [ReservationController::class, 'payer'])->name('reservation.admin.payer');
@@ -182,6 +200,9 @@ Route::middleware('auth')->group(function () {
         Route::patch('/reservation/admin/{reservation}/embarquer', [ReservationController::class, 'embarquer'])->name('reservation.admin.embarquer');
         // passenger list of a bus (printable), for the controller / driver
         Route::get('/voyages/{voyage}/passagers', [VoyageController::class, 'passagers'])->name('voyages.passagers');
+        // recurring trips: copy a voyage on chosen weekdays over a period
+        Route::get('/voyages/{voyage}/programmer', [VoyageController::class, 'programmer'])->name('voyages.programmer');
+        Route::post('/voyages/{voyage}/programmer', [VoyageController::class, 'programmerStore'])->name('voyages.programmer.store');
 
         // Logo color and name (super admin only, see AdminPermission)
         Route::get('/admin/apparence', [ApparenceController::class, 'edit'])->name('admin.apparence.edit');

@@ -23,6 +23,8 @@
                 </div>
                 <x-admin.field type="select" name="role" label="Rôle" col="col-md-6" empty="Aucun rôle"
                                :options="$roles->pluck('name', 'id')" :value="$user->roles->first()?->id" />
+                <x-admin.field type="select" name="societe_id" label="Compagnie (espace compagnie)" col="col-md-6" empty="Toutes (équipe BLASTI)"
+                               :options="$societes->pluck('raison_social', 'id')" :value="$user->societe_id" hint="Un compte lié à une compagnie ne voit que ses autocars, voyages, billets et avis." />
             </x-admin.form-section>
         @endif
     </x-admin.form>

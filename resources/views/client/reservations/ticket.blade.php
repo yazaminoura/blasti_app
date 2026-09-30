@@ -29,7 +29,7 @@
                             @elseif ($reservation->statut === \App\Models\Reservation::EN_ATTENTE)
                                 <div class="alert alert-warning">{{ __('Paiement en cours de confirmation par la banque. Rechargez la page dans un instant.') }}</div>
                             @elseif (! $reservation->isPaid())
-                                <div class="alert alert-info">{{ __('Billet confirmé. Le paiement (:montant DH) se fait à l\'embarquement.', ['montant' => number_format($reservation->prix + $reservation->frais, 2, ',', ' ')]) }}</div>
+                                <div class="alert alert-info">{{ __('Billet confirmé. Le paiement (:montant DH) se fait à l\'embarquement.', ['montant' => number_format($reservation->total(), 2, ',', ' ')]) }}</div>
                                 @if ($reservation->awaitsPresence() && $reservation->departAt()->isFuture() && auth()->id() === $reservation->user_id)
                                     {{-- unpaid: the seat is kept only if the client confirms (config safar.confirmation) --}}
                                     <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -75,6 +75,17 @@
                                             <p class="info-value fw-bold">{{ $reservation->num_siege }}</p>
                                         </div>
                                     </div>
+                                    {{-- which bus: company, plate number, class --}}
+                                    <div class="col-md-6 mb-3">
+                                        <div class="info-card bg-light p-3 rounded">
+                                            <h6 class="info-label text-muted">{{ __('Autocar') }}</h6>
+                                            <p class="info-value fw-bold">{{ $reservation->autocar?->societe?->raison_social ?? '—' }}</p>
+                                            <p class="info-detail text-muted">
+                                                <i class="isax isax-bus me-1"></i>{{ __('Immatriculation') }} : {{ $reservation->autocar?->matricule ?? '—' }}
+                                                @if ($reservation->typeVoyage) · {{ __($reservation->typeVoyage->type_voyage) }}@endif
+                                            </p>
+                                        </div>
+                                    </div>
                                     @unless ($reservation->isCancelled())
                                         <div class="col-md-6 mb-3">
                                             <div class="info-card bg-light p-3 rounded d-flex align-items-center gap-3">
@@ -110,7 +121,8 @@
                                     <div class="col-md-4 mb-3">
                                         <div class="info-card bg-light p-3 rounded">
                                             <h6 class="info-label text-muted">{{ __('Nom') }}</h6>
-                                            <p class="info-value fw-bold">{{ $reservation->user->name }}</p>
+                                            <p class="info-value fw-bold">{{ $reservation->passager() }}</p>
+                                            @if ($reservation->passager() !== $reservation->user->name)<p class="info-detail text-muted">{{ __('Réservé par :nom', ['nom' => $reservation->user->name]) }}</p>@endif
                                         </div>
                                     </div>
                                     <div class="col-md-4 mb-3">
@@ -149,7 +161,7 @@
                                     <div class="col-md-4 mb-3">
                                         <div class="info-card bg-light p-3 rounded">
                                             <h6 class="info-label text-muted">{{ __('Total Payé') }}</h6>
-                                            <p class="info-value fw-bold">{{ number_format($reservation->prix + $reservation->frais, 2) }} DH</p>
+                                            <p class="info-value fw-bold">{{ number_format($reservation->total(), 2) }} DH</p>
                                         </div>
                                     </div>
                                 </div>
@@ -160,6 +172,11 @@
                                 @if (auth()->id() === $reservation->user_id)
                                     <a href="{{ route('client.profile.reservations.index') }}" class="btn btn-light btn-lg px-4 py-2"><i class="isax isax-arrow-left-2 me-1"></i> {{ __('Mes réservations') }}</a>
                                 @endif
+                                @if (auth()->id() === $reservation->user_id && $reservation->peutEtreNote())
+                                    <a href="{{ route('client.avis.create', $reservation->id) }}" class="btn btn-warning btn-lg px-4 py-2">
+                                        <i class="isax isax-star-1 me-1"></i> {{ __('Donner mon avis') }}
+                                    </a>
+                                @endif
                                 @if (auth()->id() === $reservation->user_id && $reservation->canBeChangedByClient())
                                     <a href="{{ route('client.reservations.change', $reservation->id) }}" class="btn btn-outline-primary btn-lg px-4 py-2">
                                         <i class="isax isax-calendar-edit me-1"></i> {{ __('Modifier la date') }}
@@ -168,6 +185,9 @@
                                 @unless ($reservation->isCancelled())
                                     <a href="{{ route('ticket.download', $reservation->id) }}" class="btn btn-primary btn-lg px-4 py-2">
                                         <i class="fas fa-download me-2"></i> {{ __('Télécharger le billet (PDF)') }}
+                                    </a>
+                                    <a href="{{ \App\Support\WhatsApp::lien($reservation) }}" target="_blank" rel="noopener" class="btn bl-btn-whatsapp btn-lg px-4 py-2">
+                                        <i class="fab fa-whatsapp me-2"></i> {{ __('Envoyer sur WhatsApp') }}
                                     </a>
                                 @endunless
                                 @if (auth()->id() === $reservation->user_id && $reservation->canBeCancelledByClient())

@@ -66,6 +66,7 @@ class RegisteredUserController extends Controller
         $retour = RetourUrl::from($request) ?? route('home');
         $request->session()->put('url.intended', $retour);
 
-        return redirect()->to($retour)->with('success', __('Compte créé ! Nous vous avons envoyé un lien de vérification à :email : cliquez dessus pour pouvoir réserver.', ['email' => $user->email]));
+        // popup "account created" with an "open my mailbox" button (layouts/scripts)
+        return redirect()->to($retour)->with('inscription', $user->email);
     }
 }

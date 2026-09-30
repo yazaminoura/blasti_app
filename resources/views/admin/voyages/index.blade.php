@@ -125,6 +125,9 @@
                                     :delete="$canDelete ? route('voyages.destroy', $voyage->id) : null"
                                     :confirm="'Supprimer le voyage ' . $voyage->villeDepart?->ville . ' → ' . $voyage->villeArrivee?->ville . ' ?'">
                                     <a href="{{ route('voyages.passagers', $voyage->id) }}" class="sa-icon-btn" title="Liste des passagers"><i class="bi bi-people"></i></a>
+                                    @if ($user->hasPermission('voyages.create'))
+                                        <a href="{{ route('voyages.programmer', $voyage->id) }}" class="sa-icon-btn" title="Programmer sur d'autres jours"><i class="bi bi-calendar-plus"></i></a>
+                                    @endif
                                 </x-admin.row-actions>
                             </td>
                         </tr>

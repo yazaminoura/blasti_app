@@ -1,5 +1,7 @@
 <!-- Sweetalert JS -->
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.17.2/dist/sweetalert2.all.min.js"></script>
+<!-- One look for every popup and toast: BlastiAlert.fire / BlastiAlert.toast -->
+<script src="{{ asset('assets/js/blasti-alert.js') . '?v=' . @filemtime(public_path('assets/js/blasti-alert.js')) }}"></script>
 <!-- Jquery JS -->
 <script src="{{asset('assets/js/jquery-3.7.1.min.js')}}"></script>
 
@@ -46,11 +48,31 @@
 
 <!-- Reservation script -->
 <script src="{{asset('assets/js/reservation.js')}}"></script>
-@if (session('error'))
-<x-alert type="error" :message="session('error')" />
+{{-- just signed up: the verification link is in the mailbox (RegisteredUserController) --}}
+@if (session('inscription'))
+    @php
+        // built here: Blade's @json() splits its argument on commas
+        $boiteMail = \App\Support\Mailbox::for(session('inscription'));
+        $inscriptionPopup = [
+            'type' => 'success',
+            'icon' => 'isax-sms-tracking5',
+            'title' => __('Compte créé !'),
+            'html' => '<p class="bl-swal-text">' . __('Dernière étape : nous avons envoyé un lien à :email. Cliquez dessus pour activer votre compte et pouvoir réserver.', ['email' => '<strong>' . e(session('inscription')) . '</strong>'])
+                . '</p><p class="bl-swal-text mt-2" style="font-size:.85rem">' . e(__('Rien reçu ? Regardez dans les courriers indésirables (spam).')) . '</p>',
+            'links' => $boiteMail ? [['href' => $boiteMail['url'], 'label' => __('Ouvrir :boite', ['boite' => $boiteMail['nom']]), 'icon' => 'isax-sms', 'newTab' => true, 'primary' => true]] : [],
+            'confirmText' => __('Compris'),
+        ];
+    @endphp
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.BlastiAlert) BlastiAlert.fire(@json($inscriptionPopup));
+        });
+    </script>
 @endif
 
-
-@if (session('success'))
-<x-alert type="success" :message="session('success')" />
-@endif
+{{-- flash messages: redirect()->with('success' | 'error' | 'warning' | 'info', '...') --}}
+@foreach (['error', 'warning', 'info', 'success'] as $flash)
+    @if (session($flash))
+        <x-alert :type="$flash" :message="session($flash)" />
+    @endif
+@endforeach

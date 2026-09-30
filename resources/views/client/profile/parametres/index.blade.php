@@ -181,67 +181,27 @@
     </x-profile-layout>
 </x-app-layout>
 <script>
+    // profile photo removal: same popups as the rest of the site (assets/js/blasti-alert.js)
     function confirmDeleteImage(event) {
         event.preventDefault();
 
-        Swal.fire({
-            title: @json(__('Êtes-vous sûr?')),
-            text: @json(__('Cette action supprimera immédiatement votre photo de profil!')),
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonColor: "red", // Bootstrap Danger (Red)
-            cancelButtonColor: "black", // Bootstrap Secondary (Gray)
-            confirmButtonText: "<i class='fas fa-trash-alt'></i> " + @json(__('Supprimer')),
-            cancelButtonText: "<i class='fas fa-times'></i> " + @json(__('Annuler')),
-            buttonsStyling: false,
-            customClass: {
-                popup: 'rounded-3 shadow-lg', // Rounded corners & shadow
-                title: 'fw-bold fs-5', // Bold & slightly larger title
-                confirmButton: 'btn btn-danger px-4 py-2', // Red button
-                cancelButton: 'btn btn-light px-4 py-2', // Gray button
-                icon: 'text-danger fs-1', // Large red icon
-            }
+        BlastiAlert.fire({
+            type: "warning",
+            title: @json(__('Supprimer votre photo ?')),
+            text: @json(__('Votre photo de profil sera supprimée tout de suite. Vous pourrez en ajouter une autre quand vous voulez.')),
+            confirmText: @json(__('Supprimer')),
+            cancelText: @json(__('Annuler')),
+            danger: true,
         }).then((result) => {
-            if (result.isConfirmed) {
-                fetch("{{ route('profile.delete-image') }}", {
-                    method: "DELETE",
-                    headers: {
-                        "X-CSRF-TOKEN": "{{ csrf_token() }}",
-                        "Content-Type": "application/json",
-                        "Accept": "application/json"
-                    },
-                    body: JSON.stringify({})
-                })
-                .then(response => response.json())
-                .then(data => {
-                    Swal.fire({
-                        title: @json(__('Supprimé!')),
-                        text: data.message,
-                        icon: "success",
-                        confirmButtonColor: "#28a745",
-                        confirmButtonText: "OK",
-                        customClass: {
-                            confirmButton: 'btn btn-success px-4 py-2'
-                        }
-                    }).then(() => {
-                        location.reload(); 
-                    });
-                })
-                .catch(error => {
-                    console.error("Error deleting image:", error);
-                    Swal.fire({
-                        title: @json(__('Erreur!')),
-                        text: @json(__('Impossible de supprimer l\'image.')),
-                        icon: "error",
-                        confirmButtonColor: "#dc3545",
-                        confirmButtonText: "OK",
-                        customClass: {
-                            confirmButton: 'btn btn-danger px-4 py-2'
-                        }
-                    });
-                });
-            }
+            if (!result.isConfirmed) return;
+            fetch("{{ route('profile.delete-image') }}", {
+                method: "DELETE",
+                headers: { "X-CSRF-TOKEN": "{{ csrf_token() }}", "Content-Type": "application/json", "Accept": "application/json" },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => BlastiAlert.fire({ type: "success", title: @json(__('Photo supprimée')), text: data.message }).then(() => location.reload()))
+            .catch(() => BlastiAlert.fire({ type: "error", title: @json(__('Suppression impossible')), text: @json(__('La photo n\'a pas pu être supprimée. Réessayez dans un instant.')) }));
         });
     }
-    
 </script>

@@ -100,7 +100,7 @@
             <dl class="sa-dl">
                 <dt>Prix</dt><dd class="text-end sa-num">{{ number_format($reservation->prix, 2, ',', ' ') }} DH</dd>
                 <dt>Frais</dt><dd class="text-end sa-num">{{ number_format($reservation->frais, 2, ',', ' ') }} DH</dd>
-                <dt class="sa-strong">Total</dt><dd class="text-end sa-num fw-bold fs-5">{{ number_format($reservation->prix + $reservation->frais, 2, ',', ' ') }} DH</dd>
+                <dt class="sa-strong">Total</dt><dd class="text-end sa-num fw-bold fs-5">{{ number_format($reservation->total(), 2, ',', ' ') }} DH</dd>
             </dl>
             <div class="sa-sub mt-2">Mode : {{ $reservation->modeReglement?->mode_reglement ?? '—' }}</div>
             <div class="sa-divider"></div>
@@ -118,6 +118,33 @@
                     @endif
                 @endif
             </dl>
+            @if ($reservation->encaissements->isNotEmpty())
+                <div class="sa-divider"></div>
+                <div class="sa-sub mb-1">Encaissé par l'équipe</div>
+                <dl class="sa-dl">
+                    @foreach ($reservation->encaissements as $e)
+                        <dt>{{ $e->created_at->format('d/m H:i') }} · {{ $e->user?->name ?? '—' }}</dt>
+                        <dd class="text-end sa-num">{{ number_format($e->montant, 2, ',', ' ') }} DH <span class="sa-sub">{{ \App\Models\Encaissement::MODES[$e->mode] ?? $e->mode }}</span></dd>
+                    @endforeach
+                </dl>
+            @endif
+        </x-admin.card>
+
+        {{-- bus door: first scan, boarding, and every scan (a ticket shown twice or on the wrong bus shows up here) --}}
+        <x-admin.card title="Contrôle" icon="bi-qr-code-scan" class="mt-3">
+            <dl class="sa-dl">
+                <dt>Premier scan</dt><dd class="text-end">{{ $reservation->scanne_le?->format('d/m/Y H:i') ?? 'Jamais scanné' }}</dd>
+                <dt>Montée</dt><dd class="text-end">{{ $reservation->embarque_le ? $reservation->embarque_le->format('d/m/Y H:i') . ' · ' . ($reservation->embarquePar?->name ?? '—') : 'Pas encore' }}</dd>
+            </dl>
+            @if ($reservation->scans->isNotEmpty())
+                <div class="sa-divider"></div>
+                <dl class="sa-dl">
+                    @foreach ($reservation->scans->take(10) as $scan)
+                        <dt>{{ $scan->created_at->format('d/m H:i') }} · {{ $scan->user?->name ?? '—' }}</dt>
+                        <dd class="text-end">{{ \App\Support\Controle::LIBELLES[$scan->resultat] ?? $scan->resultat }}</dd>
+                    @endforeach
+                </dl>
+            @endif
         </x-admin.card>
     </div>
 </div>

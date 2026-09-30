@@ -141,9 +141,12 @@ class UnpaidTicketRulesTest extends TestCase
         $ticket = Reservation::sole();
         $controller = User::factory()->create(['isadmin' => 1]); // super admin
 
+        // boarding day, at the bus door
+        $this->travelTo($ticket->departAt()->subHour());
+
         // not paid yet: boarding refused
         $this->actingAs($controller)->patch(route('reservation.admin.embarquer', $ticket))->assertSessionHas('error');
-        $this->actingAs($controller)->get($ticket->verificationUrl())->assertSee(__('Encaisser :montant DH', ['montant' => '100,00']));
+        $this->actingAs($controller)->get($ticket->verificationUrl())->assertSee(__('Encaisser :montant DH en espèces', ['montant' => '100,00']));
 
         $this->actingAs($controller)->patch(route('reservation.admin.payer', $ticket));
         $this->actingAs($controller)->patch(route('reservation.admin.embarquer', $ticket))->assertSessionHas('success');

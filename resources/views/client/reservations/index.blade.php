@@ -104,6 +104,23 @@
                                     {{ __(':free places libres', ['free' => max(0, (int) $voyage->autocar?->nbr_siege - count($reservedSeats))]) }} · {{ __(':max sièges maximum', ['max' => config('safar.max_sieges')]) }}
                                 </span>
                             </div>
+                            {{-- full bus: e-mail when a seat frees up (AlertePlace, sent from Reservation::cancel) --}}
+                            @if (count($reservedSeats) >= (int) $voyage->autocar?->nbr_siege)
+                                <form method="POST" action="{{ route('client.reservations.alerte', $voyage) }}" class="bl-full-alert mb-3">
+                                    @csrf
+                                    <input type="hidden" name="de" value="{{ $depart->id }}">
+                                    <input type="hidden" name="a" value="{{ $arrivee->id }}">
+                                    <i class="isax isax-notification-bing fs-24"></i>
+                                    <div class="flex-fill">
+                                        <strong class="d-block">{{ __('Ce bus est complet.') }}</strong>
+                                        <span class="fs-14">{{ __('Des places se libèrent souvent (annulations). Laissez votre e-mail : nous vous prévenons dès qu\'un siège est libre.') }}</span>
+                                        <div class="d-flex gap-2 mt-2">
+                                            <input type="email" name="email" class="form-control" required maxlength="120" value="{{ auth()->user()?->email }}" placeholder="{{ __('Votre adresse e-mail') }}">
+                                            <button class="btn btn-primary text-nowrap">{{ __('Prévenez-moi') }}</button>
+                                        </div>
+                                    </div>
+                                </form>
+                            @endif
                             @include('client.reservations._seat-map', [
                                 'totalSeats' => $voyage->autocar?->nbr_siege ?? 0,
                                 'reservedSeats' => $reservedSeats,
@@ -175,6 +192,9 @@
                                     <input type="hidden" name="voyage_id" value="{{ $voyage->id }}">
                                     <input type="hidden" name="arret_depart_id" value="{{ $depart->id }}">
                                     <input type="hidden" name="arret_arrivee_id" value="{{ $arrivee->id }}">
+                                    @if (session('retour_de'))
+                                        <input type="hidden" name="retour_de" value="{{ session('retour_de') }}">
+                                    @endif
 
                                     @if ($errors->any() && ! old('auth_form'))
                                         <div class="alert alert-danger mb-3">
@@ -198,14 +218,26 @@
                                     @auth
                                         @unless (auth()->user()->hasVerifiedEmail())
                                             {{-- signed up but the link in the e-mail is not clicked yet: no booking until then --}}
-                                            <div class="alert alert-warning fs-14 mb-3" id="verify-email-alert">
-                                                <strong>{{ __('Confirmez votre adresse e-mail pour réserver.') }}</strong>
-                                                {{ __('Nous avons envoyé un lien à :email. Cliquez dessus, puis revenez sur cette page.', ['email' => auth()->user()->email]) }}
+                                            @php $boiteMail = \App\Support\Mailbox::for(auth()->user()->email); @endphp
+                                            <div class="bl-verify-box mb-3" id="verify-email-alert">
+                                                <div class="d-flex gap-2 mb-2">
+                                                    <i class="isax isax-sms-tracking fs-20"></i>
+                                                    <div>
+                                                        <strong class="d-block">{{ __('Confirmez votre adresse e-mail pour réserver.') }}</strong>
+                                                        <span>{{ __('Nous avons envoyé un lien à :email. Cliquez dessus, puis revenez sur cette page.', ['email' => auth()->user()->email]) }}</span>
+                                                    </div>
+                                                </div>
                                                 @if (session('status') === 'verification-link-sent')
-                                                    <div class="mt-1 text-success">{{ __('Un nouveau lien de vérification vient de vous être envoyé.') }}</div>
-                                                @else
-                                                    <button type="submit" form="resend-verification" class="btn btn-link btn-sm p-0 align-baseline">{{ __('Renvoyer le lien') }}</button>
+                                                    <div class="text-success fw-semibold mb-2"><i class="isax isax-tick-circle me-1"></i>{{ __('Un nouveau lien de vérification vient de vous être envoyé.') }}</div>
                                                 @endif
+                                                <div class="d-flex flex-wrap gap-2">
+                                                    @if ($boiteMail)
+                                                        <a href="{{ $boiteMail['url'] }}" target="_blank" rel="noopener" class="btn btn-primary btn-sm rounded-pill px-3"><i class="isax isax-sms me-1"></i>{{ __('Ouvrir :boite', ['boite' => $boiteMail['nom']]) }}</a>
+                                                    @endif
+                                                    @unless (session('status') === 'verification-link-sent')
+                                                        <button type="submit" form="resend-verification" class="btn btn-light btn-sm rounded-pill px-3">{{ __('Renvoyer le lien') }}</button>
+                                                    @endunless
+                                                </div>
                                             </div>
                                         @endunless
                                     @endauth
@@ -226,7 +258,7 @@
                                     <button type="submit" class="btn btn-confirm mb-3" id="confirm-booking">
                                         {{ __('Continuer vers le paiement') }} <i class="isax isax-arrow-right-3 ms-1"></i>
                                     </button>
-                                    <p class="text-muted fs-13 text-center mb-0"><i class="isax isax-shield-tick me-1"></i>{{ __('Vous choisirez votre mode de paiement à l\x27étape suivante.') }}</p>
+                                    <p class="text-muted fs-13 text-center mb-0"><i class="isax isax-shield-tick me-1"></i>{{ __('Vous choisirez votre mode de paiement à l\'étape suivante.') }}</p>
                                 </form>
                                 @auth
                                     @unless (auth()->user()->hasVerifiedEmail())
@@ -250,12 +282,24 @@
             const PRICE = {{ (float) $prix }};
             const GUEST = @json(auth()->guest());
             const VERIFIED = @json(auth()->check() && auth()->user()->hasVerifiedEmail());
-            const T = {
-                login: @json(__('Connectez-vous ou créez un compte pour choisir votre siège. Vous reviendrez ici ensuite.')),
-                max: @json(__('Vous pouvez réserver au maximum :max sièges à la fois.', ['max' => config('safar.max_sieges')])),
-                none: @json(__('Veuillez choisir au moins un siège.')),
-                verify: @json(__('Confirmez d\'abord votre adresse e-mail : cliquez sur le lien que nous vous avons envoyé.')),
-            };
+            @php
+                // texts of the popups, built here: Blade's @json() splits its argument on commas
+                $textes = [
+                    'login' => __('Connectez-vous ou créez un compte pour choisir votre siège. Vous reviendrez ici ensuite.'),
+                    'maxTitle' => __('Maximum atteint'),
+                    'max' => __('Vous pouvez réserver :max sièges à la fois. Retirez un siège pour en choisir un autre, ou faites une deuxième réservation.', ['max' => config('safar.max_sieges')]),
+                    'noneTitle' => __('Aucun siège choisi'),
+                    'none' => __('Cliquez sur un siège libre du plan de l\'autocar pour le sélectionner, puis continuez.'),
+                    'verifyTitle' => __('Confirmez votre adresse e-mail'),
+                    'verify' => __('Pour réserver, cliquez d\'abord sur le lien que nous avons envoyé à :email. Pensez à regarder dans les spams, puis revenez sur cette page.', ['email' => auth()->user()?->email]),
+                    'resend' => __('Renvoyer le lien'),
+                    'later' => __('Plus tard'),
+                ];
+                $boite = \App\Support\Mailbox::for(auth()->user()?->email);
+                $mailboxLink = $boite ? ['href' => $boite['url'], 'label' => __('Ouvrir :boite', ['boite' => $boite['nom']]), 'icon' => 'isax-sms', 'newTab' => true, 'primary' => true] : null;
+            @endphp
+            const T = @json($textes);
+            const MAILBOX = @json($mailboxLink);
             const fmt = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
             function refresh() {
@@ -266,9 +310,19 @@
                 document.getElementById('seat-total').textContent = fmt.format(chosen.length * PRICE);
             }
 
-            function warn(text) {
-                if (window.Swal) Swal.fire({ icon: 'info', text: text, confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--brand') || undefined });
+            function warn(title, text) {
+                if (window.BlastiAlert) BlastiAlert.fire({ type: 'warning', title: title, text: text });
                 else alert(text);
+            }
+
+            // e-mail not confirmed yet: open the mailbox, or get a new link
+            function askVerification() {
+                if (!window.BlastiAlert) return alert(T.verify);
+                BlastiAlert.fire({
+                    type: 'info', icon: 'isax-sms-tracking5', title: T.verifyTitle, text: T.verify,
+                    links: MAILBOX ? [MAILBOX] : [],
+                    confirmText: T.resend, cancelText: T.later,
+                }).then((r) => { if (r.isConfirmed) document.getElementById('resend-verification')?.submit(); });
             }
 
             inputs.forEach(input => input.addEventListener('click', function (e) {
@@ -281,7 +335,7 @@
                 }
                 if (this.checked && inputs.filter(i => i.checked).length > MAX) {
                     e.preventDefault();
-                    warn(T.max);
+                    warn(T.maxTitle, T.max);
                     return;
                 }
                 refresh();
@@ -295,13 +349,12 @@
                 }
                 if (!VERIFIED) {
                     e.preventDefault();
-                    warn(T.verify);
-                    document.getElementById('verify-email-alert')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                    askVerification();
                     return;
                 }
                 if (!inputs.some(i => i.checked)) {
                     e.preventDefault();
-                    warn(T.none);
+                    warn(T.noneTitle, T.none);
                     return;
                 }
                 const button = document.getElementById('confirm-booking');

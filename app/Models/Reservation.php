@@ -26,6 +26,7 @@ class Reservation extends Model
         'rappel_envoye_le' => 'datetime',
         'modifiee_le' => 'datetime',
         'embarque_le' => 'datetime',
+        'scanne_le' => 'datetime',
         'confirmation_demandee_le' => 'datetime',
         'presence_confirmee_le' => 'datetime',
     ];
@@ -37,6 +38,8 @@ class Reservation extends Model
     protected static function booted(): void
     {
         static::addGlobalScope('active', fn ($query) => $query->where((new static)->qualifyColumn('statut'), '!=', self::ANNULEE));
+        // company space (admin pages only, see App\Support\SocieteScope)
+        static::addGlobalScope('societe', \App\Support\SocieteScope::viaAutocar());
 
         static::creating(function (self $reservation) {
             // the seat really held by the reservation (emptied on cancellation)
@@ -74,6 +77,17 @@ class Reservation extends Model
         return \Carbon\Carbon::parse(\Carbon\Carbon::parse($this->date_depart)->toDateString() . ' ' . $this->heure_depart);
     }
 
+    public function arriveeAt(): \Carbon\Carbon
+    {
+        return \Carbon\Carbon::parse(\Carbon\Carbon::parse($this->date_arrivee)->toDateString() . ' ' . $this->heure_arrivee);
+    }
+
+    /** The trip is over and the client has not rated it yet (one review per ticket). */
+    public function peutEtreNote(): bool
+    {
+        return ! $this->isCancelled() && $this->arriveeAt()->isPast() && ! $this->avis()->exists();
+    }
+
     /** A client may cancel until the boarding time, never after (the admin can cancel anytime). */
     public function canBeCancelledByClient(): bool
     {
@@ -95,6 +109,39 @@ class Reservation extends Model
     public function changeDeadline(): \Carbon\Carbon
     {
         return $this->departAt()->subHours((int) config('safar.modification_heures'));
+    }
+
+    /** Splits a discount between $n seats in cents: [3.34, 3.33, 3.33]. */
+    public static function repartir(float $remise, int $n): array
+    {
+        if ($n < 1) {
+            return [];
+        }
+        $cents = (int) round($remise * 100);
+        $base = intdiv($cents, $n);
+
+        return array_map(fn ($i) => ($base + ($i < $cents % $n ? 1 : 0)) / 100, range(0, $n - 1));
+    }
+
+    /**
+     * Return-trip discount: $commande is an outbound order of this client, not cancelled, going the other way
+     * (its arrival city is where this trip starts) and leaving before $depart. Returns the order code or null.
+     */
+    public static function retourValide(?string $commande, ?User $user, VoyageArret $depart): ?string
+    {
+        if (! $commande || ! $user || (float) config('safar.remise_retour_pourcent') <= 0) {
+            return null;
+        }
+        $aller = static::where('commande', $commande)->where('user_id', $user->id)->first();
+
+        return $aller && (int) $aller->ville_arrivee_id === (int) $depart->ville_id && $aller->departAt()->lt($depart->passage_at)
+            ? $commande : null;
+    }
+
+    /** Traveller of this seat (typed at booking), else the account holder. */
+    public function passager(): string
+    {
+        return $this->passager_nom ?: (string) $this->user?->name;
     }
 
     /** The controller scanned the ticket and let the traveller in. */
@@ -188,7 +235,8 @@ class Reservation extends Model
     /** What the ticket cost (price + fees). */
     public function total(): float
     {
-        return round((float) $this->prix + (float) $this->frais, 2);
+        // remise: promo code or return-trip discount
+        return round(max(0, (float) $this->prix + (float) $this->frais - (float) $this->remise), 2);
     }
 
     /**
@@ -266,6 +314,11 @@ class Reservation extends Model
             'montant_rembourse' => $this->isPaid() ? $quote['montant'] : null,
             'frais_annulation' => $this->isPaid() ? $quote['frais'] : null,
         ])->save();
+
+        // a seat is free again: tell the people waiting for this bus ("Prévenez-moi")
+        if ($this->voyage_id) {
+            AlertePlace::notifier((int) $this->voyage_id);
+        }
     }
 
     public function markPaid(?string $reference = null): void
@@ -313,10 +366,14 @@ class Reservation extends Model
         $filters = array_filter($filters, fn ($value) => $value !== null && $value !== '');
 
         return $query
-            ->when($filters['q'] ?? null, fn ($q, $term) => $q->whereHas('user', fn ($u) => $u
-                ->where('name', 'like', "%{$term}%")
-                ->orWhere('email', 'like', "%{$term}%")
-                ->orWhere('telephone', 'like', "%{$term}%")))
+            // client (name, e-mail, phone), traveller name, or order code (agency payment: the client gives his code)
+            ->when($filters['q'] ?? null, fn ($q, $term) => $q->where(fn ($w) => $w
+                ->whereHas('user', fn ($u) => $u
+                    ->where('name', 'like', "%{$term}%")
+                    ->orWhere('email', 'like', "%{$term}%")
+                    ->orWhere('telephone', 'like', "%{$term}%"))
+                ->orWhere('passager_nom', 'like', "%{$term}%")
+                ->orWhere('commande', strtoupper(trim($term)))))
             ->when($filters['ville_depart_id'] ?? null, fn ($q, $id) => $q->where('ville_depart_id', $id))
             ->when($filters['ville_arrivee_id'] ?? null, fn ($q, $id) => $q->where('ville_arrivee_id', $id))
             ->when($filters['mode_reglement_id'] ?? null, fn ($q, $id) => $q->where('mode_reglement_id', $id))
@@ -353,6 +410,51 @@ class Reservation extends Model
         return $this->belongsTo(Voyage::class);
     }
 
+    /** Staff member who let the traveller in. */
+    public function embarquePar()
+    {
+        return $this->belongsTo(User::class, 'embarque_par');
+    }
+
+    /** Money collected by staff for this ticket (cash drawer). */
+    public function encaissements()
+    {
+        return $this->hasMany(Encaissement::class)->latest();
+    }
+
+    public function scans()
+    {
+        return $this->hasMany(Scan::class)->latest();
+    }
+
+    /**
+     * A staff member collects what is still due (whole price, or the supplement after a change of departure).
+     * Returns the amount collected, 0 if nothing was due.
+     */
+    public function encaisser(User $par, string $mode = 'especes'): float
+    {
+        $montant = $this->resteAPayer();
+        if ($montant <= 0) {
+            return 0.0;
+        }
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($par, $mode, $montant) {
+            $this->encaissements()->create(['user_id' => $par->id, 'montant' => $montant, 'mode' => $mode]);
+            $this->markPaid($mode === 'carte' ? 'guichet-carte' : 'guichet');
+        });
+
+        return $montant;
+    }
+
+    /** The controller lets the traveller in (first time only: a second scan never changes the time). */
+    public function embarquer(User $par): void
+    {
+        if ($this->embarque_le) {
+            return;
+        }
+        $this->forceFill(['embarque_le' => now(), 'embarque_par' => $par->id, 'scanne_le' => $this->scanne_le ?? now()])->save();
+    }
+
     public function arretDepart()
     {
         return $this->belongsTo(VoyageArret::class, 'arret_depart_id');
@@ -361,6 +463,16 @@ class Reservation extends Model
     public function arretArrivee()
     {
         return $this->belongsTo(VoyageArret::class, 'arret_arrivee_id');
+    }
+
+    public function promotion()
+    {
+        return $this->belongsTo(Promotion::class);
+    }
+
+    public function avis()
+    {
+        return $this->hasOne(Avis::class);
     }
 
     public function modeReglement()

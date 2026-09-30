@@ -29,6 +29,9 @@ class AdminPermission
         'equipements.'           => 'equipements',
         'autocarequipements.'    => 'equipements',
         'options.'               => 'options',
+        'promotions.'            => 'promotions',
+        'avis.'                  => 'avis',
+        'admin.statistiques'     => 'statistiques',
         'autocaroptions.'        => 'options',
     ];
 
@@ -39,7 +42,7 @@ class AdminPermission
         'edit' => 'update', 'update' => 'update', 'update-password' => 'update',
         'destroy' => 'delete',
         'payer' => 'update', 'rembourser' => 'update', 'embarquer' => 'update',
-        'passagers' => 'read',
+        'passagers' => 'read', 'programmer' => 'create', 'publier' => 'update', 'scan' => 'read',
     ];
 
     /** Sections tried, in order, when a staff member without the dashboard permission logs in. */
@@ -56,6 +59,9 @@ class AdminPermission
     {
         $user = $request->user();
         $routeName = (string) $request->route()?->getName();
+
+        // company space: this account only sees its company's buses, trips, tickets and reviews
+        \App\Support\SocieteScope::activer($user->societe_id);
 
         // Editing roles = granting permissions: reserved to the super admin to avoid self-promotion
         if (str_starts_with($routeName, 'admin.roles.') && ! $user->isSuperAdmin()) {

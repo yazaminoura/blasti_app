@@ -14,8 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->web(append: [
+            \App\Http\Middleware\ResetSocieteScope::class,
             \App\Http\Middleware\SetLocale::class,
         ]);
+
+        // company filter before the route records are loaded (another company's record = 404)
+        $middleware->prependToPriorityList(\Illuminate\Routing\Middleware\SubstituteBindings::class, \App\Http\Middleware\ResetSocieteScope::class);
 
         $middleware->alias([
             'admin' => AdminIsValid::class,

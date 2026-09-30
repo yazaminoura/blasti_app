@@ -148,7 +148,7 @@
                                                 <div class="fs-12 text-muted">{{ \Carbon\Carbon::parse($reservation->heure_depart)->format('H:i') }}</div>
                                             </td>
                                             <td>{{ __('N° :num', ['num' => $reservation->num_siege]) }}</td>
-                                            <td class="text-nowrap">{{ number_format($reservation->prix + $reservation->frais, 2, ',', ' ') }} DH</td>
+                                            <td class="text-nowrap">{{ number_format($reservation->total(), 2, ',', ' ') }} DH</td>
                                             <td>
                                                 @php [$badge, $tone] = $reservation->statusBadge(); $tone = ['muted' => 'secondary', 'danger' => 'danger', 'warning' => 'warning', 'success' => 'success', 'info' => 'info'][$tone]; @endphp
                                                 @if (! $reservation->isCancelled() && ! $aVenir)
@@ -162,6 +162,9 @@
                                                 @unless ($reservation->isCancelled())
                                                     <a href="{{ route('ticket.download', $reservation->id) }}" class="me-2" title="{{ __('Télécharger le billet (PDF)') }}"><i class="isax isax-document-download"></i></a>
                                                 @endunless
+                                                @if ($reservation->peutEtreNote())
+                                                    <a href="{{ route('client.avis.create', $reservation->id) }}" class="me-2 text-warning" title="{{ __('Donner mon avis') }}"><i class="isax isax-star-1"></i></a>
+                                                @endif
                                                 @if ($reservation->canBeChangedByClient())
                                                     <a href="{{ route('client.reservations.change', $reservation->id) }}" class="me-2" title="{{ __('Modifier la date') }}"><i class="isax isax-calendar-edit"></i></a>
                                                 @endif
