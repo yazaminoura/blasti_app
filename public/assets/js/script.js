@@ -327,17 +327,16 @@ Template Name: DreamsTour - Bootstrap Template
   }
 
 	// Toggle Password
-	if($('.toggle-password').length > 0) {
-		$(document).on('click', '.toggle-password', function() {
-			$(this).find('i').toggleClass("isax-eye-slash isax-eye");
-			var input = $(this).parent().find(".pass-input");
-			if (input.attr("type") == "password") {
-				input.attr("type", "text");
-			} else {
-				input.attr("type", "password");
-			}
-		});
-	}
+	// always bound (delegated): the login popup is added to the page after this script runs
+	$(document).on('click', '.toggle-password', function() {
+		$(this).find('i').toggleClass("isax-eye-slash isax-eye");
+		var input = $(this).parent().find(".pass-input");
+		if (input.attr("type") == "password") {
+			input.attr("type", "text");
+		} else {
+			input.attr("type", "password");
+		}
+	});
 
 	// More View
 	if ($('.more-view').length > 0) {

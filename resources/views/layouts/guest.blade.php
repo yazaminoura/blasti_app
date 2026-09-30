@@ -58,7 +58,7 @@
     <!-- Scripts -->
     <script src="{{ asset('assets/js/jquery-3.7.1.min.js') }}"></script>
     <script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ asset('assets/js/script.js') }}"></script>
+    <script src="{{ asset('assets/js/script.js') . '?v=' . @filemtime(public_path('assets/js/script.js')) }}"></script>
     {{-- popups + notifications (e.g. "logged out: account opened elsewhere", "account disabled") --}}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.17.2/dist/sweetalert2.all.min.js"></script>
     <script src="{{ asset('assets/js/blasti-alert.js') . '?v=' . @filemtime(public_path('assets/js/blasti-alert.js')) }}"></script>
@@ -69,31 +69,6 @@
     @endforeach
 
     
-       <!-- Toggle Password Visibility -->
-       {{-- <script>
-        document.querySelector('.toggle-password').addEventListener('click', function() {
-            const passwordInput = document.querySelector('.pass-input');
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-            this.querySelector('i').classList.toggle('isax-eye');
-            this.querySelector('i').classList.toggle('isax-eye-slash');
-        });
-    </script> --}}
-
-
-    <script>
-        document.querySelectorAll('.toggle-password').forEach(function(toggle) {
-            toggle.addEventListener('click', function() {
-                // Find the closest input field relative to the clicked toggle button
-                const passwordInput = this.closest('.input-icon').querySelector('.pass-input');
-                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-                passwordInput.setAttribute('type', type);
-
-                // Toggle the eye icon
-                this.querySelector('i').classList.toggle('isax-eye');
-                this.querySelector('i').classList.toggle('isax-eye-slash');
-            });
-        });
-    </script>
+    {{-- password eye: handled once by script.js (a second handler here made it toggle twice = nothing) --}}
     </body>
 </html>

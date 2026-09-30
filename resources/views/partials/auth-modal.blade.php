@@ -45,7 +45,7 @@
                             </div>
                             <div class="mb-2">
                                 <label class="form-label" for="auth-login-password">{{ __('Mot de passe') }}</label>
-                                <input type="password" id="auth-login-password" name="password" class="form-control" placeholder="{{ __('Entrez votre mot de passe') }}" required autocomplete="current-password">
+                                <div class="input-icon"><input type="password" id="auth-login-password" name="password" class="form-control pass-input" placeholder="{{ __('Entrez votre mot de passe') }}" required autocomplete="current-password"><span class="input-icon-addon toggle-password" role="button" aria-label="{{ __('Afficher le mot de passe') }}"><i class="isax isax-eye-slash"></i></span></div>
                                 @if ($authForm === 'login') <x-input-error :messages="$errors->get('password')" class="mt-1" /> @endif
                             </div>
                             <div class="d-flex justify-content-between align-items-center mb-3">
@@ -78,11 +78,11 @@
                             <div class="row g-2 mb-3">
                                 <div class="col-sm-6">
                                     <label class="form-label" for="auth-reg-password">{{ __('Mot de passe') }}</label>
-                                    <input type="password" id="auth-reg-password" name="password" class="form-control" required minlength="8" autocomplete="new-password">
+                                    <div class="input-icon"><input type="password" id="auth-reg-password" name="password" class="form-control pass-input" required minlength="8" autocomplete="new-password"><span class="input-icon-addon toggle-password" role="button" aria-label="{{ __('Afficher le mot de passe') }}"><i class="isax isax-eye-slash"></i></span></div>
                                 </div>
                                 <div class="col-sm-6">
                                     <label class="form-label" for="auth-reg-password2">{{ __('Confirmation') }}</label>
-                                    <input type="password" id="auth-reg-password2" name="password_confirmation" class="form-control" required minlength="8" autocomplete="new-password">
+                                    <div class="input-icon"><input type="password" id="auth-reg-password2" name="password_confirmation" class="form-control pass-input" required minlength="8" autocomplete="new-password"><span class="input-icon-addon toggle-password" role="button" aria-label="{{ __('Afficher le mot de passe') }}"><i class="isax isax-eye-slash"></i></span></div>
                                 </div>
                                 @if ($authForm === 'register') <div class="col-12"><x-input-error :messages="$errors->get('password')" /></div> @endif
                             </div>

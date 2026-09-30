@@ -60,5 +60,6 @@
     "{1} Paiement accepté ! Votre billet vous a aussi été envoyé par e-mail.|[2,*] Paiement accepté ! Vos :count billets vous ont aussi été envoyés par e-mail.": "{1} Paiement accepté ! Votre billet vous a aussi été envoyé par e-mail.|[2,*] Paiement accepté ! Vos :count billets vous ont aussi été envoyés par e-mail.",
     "{1} Qui voyage ?|[2,*] Qui voyage ? (:count voyageurs)": "{1} Qui voyage ?|[2,*] Qui voyage ? (:count voyageurs)",
     "{1} :n étoile|[2,*] :n étoiles": "{1} :n étoile|[2,*] :n étoiles",
-    "{1} :n avis|[2,*] :n avis": "{1} :n avis|[2,*] :n avis"
+    "{1} :n avis|[2,*] :n avis": "{1} :n avis|[2,*] :n avis",
+    "{1} :count départ|[2,*] :count départs": "{1} :count départ|[2,*] :count départs"
 }

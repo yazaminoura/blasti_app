@@ -1,9 +1,10 @@
 @php
     $currentLocale = app()->getLocale();
+    // name = short code on the button, label = the language written in itself (in the list)
     $locales = [
-        'en' => ['flag' => 'us-flag.svg', 'name' => 'ENG'],
-        'ar' => ['flag' => 'morocco-flag.svg', 'name' => 'ARA'],
-        'fr' => ['flag' => 'france-flag.svg', 'name' => 'FRA']
+        'fr' => ['flag' => 'france-flag.svg', 'name' => 'FR', 'label' => 'Français'],
+        'ar' => ['flag' => 'morocco-flag.svg', 'name' => 'AR', 'label' => 'العربية'],
+        'en' => ['flag' => 'us-flag.svg', 'name' => 'EN', 'label' => 'English'],
     ];
     $activeLocale = $locales[$currentLocale] ?? $locales['fr'];
 @endphp
@@ -50,11 +51,11 @@
                                             <a href="javascript:void(0);" class="dropdown-toggle bg-white border d-flex align-items-center" data-bs-toggle="dropdown" aria-expanded="false">
                                                 <img src="{{ asset('assets/img/flags/' . $activeLocale['flag']) }}" class="me-2" alt="" style="width: 20px;">{{ $activeLocale['name'] }}
                                             </a>
-                                            <ul class="dropdown-menu p-2">
+                                            <ul class="dropdown-menu p-2 bl-lang-menu">
                                                 @foreach($locales as $code => $info)
                                                     <li>
-                                                        <a class="dropdown-item rounded d-flex align-items-center" href="{{ route('lang.switch', $code) }}">
-                                                            <img src="{{ asset('assets/img/flags/' . $info['flag']) }}" class="me-2" alt="" style="width: 20px;">{{ $info['name'] }}
+                                                        <a class="dropdown-item rounded d-flex align-items-center bl-lang-item {{ $code === $currentLocale ? 'active' : '' }}" href="{{ route('lang.switch', $code) }}" lang="{{ $code }}">
+                                                            <img src="{{ asset('assets/img/flags/' . $info['flag']) }}" class="me-2" alt="" style="width: 20px;"><span>{{ $info['label'] }}</span>@if ($code === $currentLocale)<i class="isax isax-tick-circle5 ms-auto ps-3"></i>@endif
                                                         </a>
                                                     </li>
                                                 @endforeach
@@ -87,19 +88,19 @@
                                                 <hr class="dropdown-divider my-2">
                                             </li>
                                             <li>
-                                                <a href="{{ route('client.profile.parametres.index') }}" class="dropdown-item rounded p-2">{{ __('Paramètres') }}</a>
+                                                <a href="{{ route('client.profile.parametres.index') }}" class="dropdown-item rounded p-2">{{ __('Paramètres') }}</a>
                                             </li>
                                             <li>
                                                 <form method="POST" action="{{ route('logout') }}">
                                                     @csrf
-                                                    <button type="submit" class="dropdown-item rounded p-2 border-0 bg-transparent text-danger w-100 text-start">{{ __('Déconnexion') }}</button>
+                                                    <button type="submit" class="dropdown-item rounded p-2 border-0 bg-transparent text-danger w-100 text-start">{{ __('Déconnexion') }}</button>
                                                 </form>
                                             </li>
                                         </ul>
                                     </div>
                                 @else
                                     <div class="btn btn-dark w-100 mb-3">
-                                        <a href="{{ route('login') }}" class="text-white">{{ __('Log in') }}</a> / 
+                                        <a href="{{ route('login') }}" class="text-white">{{ __('Log in') }}</a> /
                                         <a href="{{ route('register') }}" class="text-white">{{ __('Register') }}</a>
                                     </div>
                                 @endauth
@@ -166,11 +167,11 @@
                                     <a href="javascript:void(0);" class="dropdown-toggle bg-white border d-flex align-items-center p-2 rounded" data-bs-toggle="dropdown" aria-expanded="false">
                                         <img src="{{ asset('assets/img/flags/' . $activeLocale['flag']) }}" class="me-2" alt="" style="width: 20px;">{{ $activeLocale['name'] }}
                                     </a>
-                                    <ul class="dropdown-menu p-2">
+                                    <ul class="dropdown-menu p-2 bl-lang-menu">
                                         @foreach($locales as $code => $info)
                                             <li>
-                                                <a class="dropdown-item rounded d-flex align-items-center" href="{{ route('lang.switch', $code) }}">
-                                                    <img src="{{ asset('assets/img/flags/' . $info['flag']) }}" class="me-2" alt="" style="width: 20px;">{{ $info['name'] }}
+                                                <a class="dropdown-item rounded d-flex align-items-center bl-lang-item {{ $code === $currentLocale ? 'active' : '' }}" href="{{ route('lang.switch', $code) }}" lang="{{ $code }}">
+                                                    <img src="{{ asset('assets/img/flags/' . $info['flag']) }}" class="me-2" alt="" style="width: 20px;"><span>{{ $info['label'] }}</span>@if ($code === $currentLocale)<i class="isax isax-tick-circle5 ms-auto ps-3"></i>@endif
                                                 </a>
                                             </li>
                                         @endforeach
@@ -198,12 +199,12 @@
                                             <hr class="dropdown-divider my-2">
                                         </li>
                                         <li>
-                                            <a href="{{ route('client.profile.parametres.index') }}" class="dropdown-item d-inline-flex align-items-center rounded fw-medium p-2">{{ __('Paramètres') }}</a>
+                                            <a href="{{ route('client.profile.parametres.index') }}" class="dropdown-item d-inline-flex align-items-center rounded fw-medium p-2">{{ __('Paramètres') }}</a>
                                         </li>
                                         <li>
                                             <form method="POST" action="{{ route('logout') }}">
                                                 @csrf
-                                                <button type="submit" class="dropdown-item d-inline-flex align-items-center rounded fw-medium p-2">{{ __('Déconnexion') }}</button>
+                                                <button type="submit" class="dropdown-item d-inline-flex align-items-center rounded fw-medium p-2">{{ __('Déconnexion') }}</button>
                                             </form>
                                         </li>
                                     </ul>
@@ -228,11 +229,11 @@
                                     <a href="javascript:void(0);" class="dropdown-toggle bg-white border d-flex align-items-center p-2 rounded" data-bs-toggle="dropdown" aria-expanded="false">
                                         <img src="{{ asset('assets/img/flags/' . $activeLocale['flag']) }}" class="me-2" alt="" style="width: 20px;">{{ $activeLocale['name'] }}
                                     </a>
-                                    <ul class="dropdown-menu p-2">
+                                    <ul class="dropdown-menu p-2 bl-lang-menu">
                                         @foreach($locales as $code => $info)
                                             <li>
-                                                <a class="dropdown-item rounded d-flex align-items-center" href="{{ route('lang.switch', $code) }}">
-                                                    <img src="{{ asset('assets/img/flags/' . $info['flag']) }}" class="me-2" alt="" style="width: 20px;">{{ $info['name'] }}
+                                                <a class="dropdown-item rounded d-flex align-items-center bl-lang-item {{ $code === $currentLocale ? 'active' : '' }}" href="{{ route('lang.switch', $code) }}" lang="{{ $code }}">
+                                                    <img src="{{ asset('assets/img/flags/' . $info['flag']) }}" class="me-2" alt="" style="width: 20px;"><span>{{ $info['label'] }}</span>@if ($code === $currentLocale)<i class="isax isax-tick-circle5 ms-auto ps-3"></i>@endif
                                                 </a>
                                             </li>
                                         @endforeach

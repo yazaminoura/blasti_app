@@ -32,7 +32,7 @@ use App\Http\Controllers\Client\Profile\ReservationController as ProfileReservat
 Route::get('/', function () {
     // Next departures only, soonest first
     $voyages = Voyage::bookable()
-        ->with(['villeDepart', 'villeArrivee', 'typeVoyage', 'autocar.societe'])
+        ->with(['villeDepart', 'villeArrivee', 'typeVoyage', 'autocar.societe', 'arrets'])
         ->withCount('reservations')
         ->take(12)
         ->get();
@@ -48,7 +48,31 @@ Route::get('/', function () {
     // every city where a bus stops, intermediate stops included (Imouzzer, Ifrane...)
     $villesRecherche = \App\Models\Ville::whereHas('arrets')->orderBy('ville')->get();
 
-    return view('welcome', compact('voyages', 'stats', 'villesRecherche'));
+    // Popular routes: the city pairs with the most upcoming departures, cheapest current price, next departure
+    $routes = Voyage::bookable()
+        ->with(['villeDepart', 'villeArrivee', 'arrets'])
+        ->take(300)
+        ->get()
+        ->groupBy(fn ($v) => $v->ville_depart_id . '-' . $v->ville_arrivee_id)
+        ->map(fn ($groupe) => (object) [
+            'depart' => $groupe->first()->villeDepart,
+            'arrivee' => $groupe->first()->villeArrivee,
+            'departs' => $groupe->count(),
+            'prix' => $groupe->min(fn ($v) => $v->prixActuel()),
+            'prochain' => $groupe->first(),
+        ])
+        ->filter(fn ($r) => $r->depart && $r->arrivee && $r->depart->id !== $r->arrivee->id)
+        ->sortByDesc('departs')
+        ->take(8)
+        ->values();
+
+    // what the strip under the search may promise (only payment modes that really exist)
+    $paiements = [
+        'carte' => \App\Models\ModeReglement::where('en_ligne', true)->exists(),
+        'agence' => \App\Models\ModeReglement::where('en_agence', true)->exists(),
+    ];
+
+    return view('welcome', compact('voyages', 'stats', 'villesRecherche', 'routes', 'paiements'));
 })->name('home');
 
 Route::get('/contact', [ContactController::class, 'index'])->name('contact');

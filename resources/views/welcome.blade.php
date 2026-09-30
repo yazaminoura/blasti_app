@@ -22,8 +22,8 @@
                 <div class="row align-items-center">
                     <div class="col-lg-10 col-md-12 mx-auto wow fadeInUp" data-wow-delay="0.3s">
                         <div class="banner-content text-center mx-auto">
-                            <h1 class="text-white display-4 mb-2">{!! __('Découvrez de nouveaux horizons, un :icon trajet à la fois avec :brand !', ['brand' => e(config('safar.nom')), 'icon' => '<span class="flight-icon"><img src="'.\App\Support\BrandImages::url('blasti-hero-bus.png').'" class="blasti-hero-bus" style="height: 66px; width: auto; vertical-align: middle;" alt="icon"></span>']) !!}</h1>
-                            <p class="text-white mx-auto">{{ __('Votre plateforme idéale pour organiser et vivre des voyages inoubliables.') }}</p>
+                            <h1 class="text-white display-4 mb-2">{!! __('Votre billet de bus :icon partout au Maroc avec :brand', ['brand' => e(config('safar.nom')), 'icon' => '<span class="flight-icon"><img src="'.\App\Support\BrandImages::url('blasti-hero-bus.png').'" class="blasti-hero-bus" style="height: 66px; width: auto; vertical-align: middle;" alt="icon"></span>']) !!}</h1>
+                            <p class="text-white mx-auto">{{ __('Comparez les départs des compagnies, choisissez votre siège et recevez votre billet en quelques minutes.') }}</p>
                         </div>
                     </div>
                 </div>
@@ -85,86 +85,58 @@
                     </div>
                 </div>
             </div>
+            {{-- what the traveller gets, only true promises (payment modes come from Modes de règlement) --}}
+            <ul class="bl-trust">
+                <li><i class="isax isax-ticket-star"></i>{{ __('Siège choisi sur le plan du bus') }}</li>
+                <li><i class="isax isax-document-download"></i>{{ __('Billet PDF avec QR code') }}</li>
+                @if ($paiements['carte'] && $paiements['agence'])
+                    <li><i class="isax isax-card"></i>{{ __('Carte bancaire ou paiement en agence') }}</li>
+                @elseif ($paiements['carte'])
+                    <li><i class="isax isax-card"></i>{{ __('Paiement par carte bancaire') }}</li>
+                @elseif ($paiements['agence'])
+                    <li><i class="isax isax-shop"></i>{{ __('Paiement en agence') }}</li>
+                @endif
+                <li><i class="isax isax-refresh-left-square"></i>{{ __('Annulation en ligne depuis votre espace') }}</li>
+            </ul>
         </div>
     </section>
     <!-- /Banner Search -->
 
-    <!-- How it works -->
-    <section class="section pb-0">
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-xl-6 col-lg-10 text-center">
-                    <div class="section-header section-header-four text-center">
-                        <h2 class="mb-2">{!! __('<span>Comment</span> ça marche ?') !!}</h2>
-                        <p class="sub-title">{{ __('Votre billet de bus en trois étapes, sans passer au guichet.') }}</p>
-                    </div>
-                </div>
-            </div>
-            <div class="row g-4 mz-steps">
-                @foreach ([
-                    ['isax-search-normal-1', __('Cherchez votre trajet'), __('Choisissez votre ville de départ, votre destination et la date : nous affichons tous les départs disponibles.')],
-                    ['isax-ticket', __('Choisissez votre siège'), __('Voyez les places libres dans l\'autocar et réservez celle qui vous convient, fenêtre ou couloir.')],
-                    ['isax-document-download', __('Recevez votre billet'), __('Votre billet est confirmé tout de suite : téléchargez-le en PDF et présentez-le à l\'embarquement.')],
-                ] as $i => [$icon, $title, $text])
-                    <div class="col-md-4">
-                        <div class="mz-step">
-                            <span class="mz-step-num">0{{ $i + 1 }}</span>
-                            <span class="mz-step-icon"><i class="isax {{ $icon }}"></i></span>
-                            <h5>{{ $title }}</h5>
-                            <p>{{ $text }}</p>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    </section>
-    <!-- /How it works -->
 
-    <!-- Destination Section -->
-    @php
-        $displayVilles = \App\Models\Ville::has('voyagesDepart')->orHas('voyagesArrivee')
-            ->withCount(['voyagesArrivee as departs_count' => fn ($q) => $q->bookable()])
-            ->orderByDesc('departs_count')->orderBy('ville')
-            ->get();
-    @endphp
-    <section class="section destination-section">
+    <!-- Popular routes -->
+    @if ($routes->isNotEmpty())
+    <section class="section bl-routes pb-0">
         <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-xl-5 col-lg-10 text-center">
-                    <div class="section-header section-header-four text-center">
-                        <h2 class="mb-2">{!! __('<span>Nos</span> Destinations') !!}</h2>
-                        <p class="sub-title">{{ __('Découvrez toutes les villes desservies par nos voyages. Réservez votre place dès maintenant.') }}</p>
-                    </div>
+            <div class="d-flex flex-wrap align-items-end justify-content-between gap-3 mb-4">
+                <div class="section-header section-header-four mb-0">
+                    <h2 class="mb-2">{!! __('Trajets <span>populaires</span>') !!}</h2>
+                    <p class="sub-title mb-0">{{ __('Les lignes avec le plus de départs, au meilleur prix du moment.') }}</p>
                 </div>
+                <a href="{{ route('voyages.list') }}" class="btn btn-outline-primary rounded-pill px-4">{{ __('Tous les voyages') }} <i class="isax isax-arrow-right-3 ms-1"></i></a>
             </div>
-
-            <div class="row justify-content-center g-4">
-                @foreach ($displayVilles as $ville)
-                    <div class="col-lg-3 col-md-4 col-sm-6">
-                        <a href="{{ route('voyages.client.index', ['ville_arrivee' => $ville->id]) }}" class="location-wrap d-block position-relative">
-                            @if ($ville->photo_url)
-                                <img src="{{ $ville->photo_url }}" alt="{{ __($ville->ville) }}" loading="lazy" style="height: 250px; object-fit: cover; width: 100%;">
-                            @else
-                                {{-- No photo yet (the admin can add one in Villes): branded tile instead of a wrong picture --}}
-                                <div class="d-flex align-items-center justify-content-center text-white fw-bold fs-3"
-                                     style="height: 250px; background: radial-gradient(400px 160px at 100% 0%, rgba(var(--accent-rgb),.45), transparent 70%), linear-gradient(135deg, var(--brand-900), var(--brand));">
-                                    <i class="isax isax-location" style="font-size: 3rem; opacity: .35; transform: translateY(-38px);"></i>
-                                </div>
-                            @endif
-                            <span class="loc-name bg-white">{{ __($ville->ville) }}</span>
-                            @if ($ville->departs_count)
-                                <span class="mz-dest-count">{{ $ville->departs_count }} {{ $ville->departs_count > 1 ? __('départs à venir') : __('départ à venir') }}</span>
-                            @endif
-                            <span class="loc-view"><i class="isax isax-arrow-right-1"></i></span>
+            <div class="row g-3">
+                @foreach ($routes as $route)
+                    @php $prochain = \Carbon\Carbon::parse($route->prochain->date_depart); @endphp
+                    <div class="col-xl-3 col-md-4 col-sm-6">
+                        <a href="{{ route('voyages.client.index', ['ville_depart' => $route->depart->id, 'ville_arrivee' => $route->arrivee->id]) }}" class="bl-route">
+                            <span class="bl-route-cities">
+                                <span>{{ __($route->depart->ville) }}</span>
+                                <i class="isax isax-arrow-right-1"></i>
+                                <span>{{ __($route->arrivee->ville) }}</span>
+                            </span>
+                            <span class="bl-route-meta">
+                                <span><i class="isax isax-bus"></i>{{ trans_choice('{1} :count départ|[2,*] :count départs', $route->departs, ['count' => $route->departs]) }}</span>
+                                <span><i class="isax isax-clock"></i>{{ $prochain->isToday() ? __("Aujourd'hui") : ($prochain->isTomorrow() ? __('Demain') : $prochain->format('d/m')) }} · {{ \Carbon\Carbon::parse($route->prochain->heure_depart)->format('H:i') }}</span>
+                            </span>
+                            <span class="bl-route-price"><small>{{ __('dès') }}</small> {{ number_format($route->prix, 0, ',', ' ') }} {{ __('DHS') }}</span>
                         </a>
                     </div>
                 @endforeach
             </div>
         </div>
     </section>
-    <!-- /Destination Section -->
-
-
+    @endif
+    <!-- /Popular routes -->
 
  <!-- Place Section -->
 <section class="section place-section">
@@ -172,8 +144,8 @@
         <div class="row justify-content-center">
             <div class="col-xl-6 col-lg-10 text-center wow fadeInUp" data-wow-delay="0.2s">
                 <div class="section-header section-header-four mb-4 text-center">
-                    <h2 class="mb-2">{!! __('<span>Expériences</span> de Voyage Uniques.') !!}</h2>
-                    <p class="sub-title">{{ __('Connectez-vous aux meilleures offres de transport professionnel au Maroc — Réservez votre prochain trajet en toute simplicité.') }}</p>
+                    <h2 class="mb-2">{!! __('Prochains <span>départs</span>') !!}</h2>
+                    <p class="sub-title">{{ __("Les bus qui partent bientôt : réservez votre siège avant qu'ils soient complets.") }}</p>
                 </div>
             </div>
         </div>
@@ -224,7 +196,7 @@
                         </p>
                     </div>
                     <div class="d-flex align-items-center justify-content-between border-top pt-3">
-                        <h6 class="text-primary"><span class="fs-14 fw-normal text-default">{{ __('À partir de ') }}</span>{{ number_format($voyage->prix, 0, ',', ' ') }} {{ __('DHS') }}</h6>
+                        <h6 class="text-primary"><span class="fs-14 fw-normal text-default">{{ __('À partir de ') }}</span> {{ number_format($voyage->prixActuel(), 0, ',', ' ') }} {{ __('DHS') }}</h6>
                         <div class="d-flex align-items-center">
                             @php $placesRestantes = max(0, $voyage->autocar->nbr_siege - $voyage->reservations_count); @endphp
                             @if ($placesRestantes > 0)
@@ -246,10 +218,92 @@
 </section>
 <!-- /Place Section -->
 
+    <!-- How it works -->
+    <section class="section pb-0">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-xl-6 col-lg-10 text-center">
+                    <div class="section-header section-header-four text-center">
+                        <h2 class="mb-2">{!! __('<span>Comment</span> ça marche ?') !!}</h2>
+                        <p class="sub-title">{{ __('Votre billet de bus en trois étapes, sans passer au guichet.') }}</p>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-4 mz-steps">
+                @foreach ([
+                    ['isax-search-normal-1', __('Cherchez votre trajet'), __('Choisissez votre ville de départ, votre destination et la date : nous affichons tous les départs disponibles.')],
+                    ['isax-ticket', __('Choisissez votre siège'), __('Voyez les places libres dans l\'autocar et réservez celle qui vous convient, fenêtre ou couloir.')],
+                    ['isax-document-download', __('Recevez votre billet'), __('Votre billet est confirmé tout de suite : téléchargez-le en PDF et présentez-le à l\'embarquement.')],
+                ] as $i => [$icon, $title, $text])
+                    <div class="col-md-4">
+                        <div class="mz-step">
+                            <span class="mz-step-num">0{{ $i + 1 }}</span>
+                            <span class="mz-step-icon"><i class="isax {{ $icon }}"></i></span>
+                            <h5>{{ $title }}</h5>
+                            <p>{{ $text }}</p>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    </section>
+    <!-- /How it works -->
+
+    <!-- Destination Section -->
+    @php
+        $displayVilles = \App\Models\Ville::has('voyagesDepart')->orHas('voyagesArrivee')
+            ->withCount(['voyagesArrivee as departs_count' => fn ($q) => $q->bookable()])
+            ->orderByDesc('departs_count')->orderBy('ville')
+            ->take(8)->get();
+    @endphp
+    <section class="section destination-section">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-xl-5 col-lg-10 text-center">
+                    <div class="section-header section-header-four text-center">
+                        <h2 class="mb-2">{!! __('<span>Nos</span> Destinations') !!}</h2>
+                        <p class="sub-title">{{ __('Découvrez toutes les villes desservies par nos voyages. Réservez votre place dès maintenant.') }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row justify-content-center g-4">
+                @foreach ($displayVilles as $ville)
+                    <div class="col-lg-3 col-md-4 col-sm-6">
+                        <a href="{{ route('voyages.client.index', ['ville_arrivee' => $ville->id]) }}" class="location-wrap d-block position-relative">
+                            @if ($ville->photo_url)
+                                <img src="{{ $ville->photo_url }}" alt="{{ __($ville->ville) }}" loading="lazy" style="height: 250px; object-fit: cover; width: 100%;">
+                            @else
+                                {{-- No photo yet (the admin can add one in Villes): branded tile instead of a wrong picture --}}
+                                <div class="d-flex align-items-center justify-content-center text-white fw-bold fs-3"
+                                     style="height: 250px; background: radial-gradient(400px 160px at 100% 0%, rgba(var(--accent-rgb),.45), transparent 70%), linear-gradient(135deg, var(--brand-900), var(--brand));">
+                                    <i class="isax isax-location" style="font-size: 3rem; opacity: .35; transform: translateY(-38px);"></i>
+                                </div>
+                            @endif
+                            <span class="loc-name bg-white">{{ __($ville->ville) }}</span>
+                            @if ($ville->departs_count)
+                                <span class="mz-dest-count">{{ $ville->departs_count }} {{ $ville->departs_count > 1 ? __('départs à venir') : __('départ à venir') }}</span>
+                            @endif
+                            <span class="loc-view"><i class="isax isax-arrow-right-1"></i></span>
+                        </a>
+                    </div>
+                @endforeach
+            </div>
+            <div class="text-center mt-4">
+                <a href="{{ route('pages.destinations') }}" class="btn btn-outline-primary rounded-pill px-4">{{ __('Toutes les destinations') }} <i class="isax isax-arrow-right-3 ms-1"></i></a>
+            </div>
+        </div>
+    </section>
+    <!-- /Destination Section -->
+
+
+
+
+
     <!-- Why us -->
     <section class="section mz-why">
         <div class="container">
-            <div class="row align-items-center g-5">
+            <div class="row align-items-center g-4 g-lg-5">
                 <div class="col-lg-5">
                     <div class="section-header section-header-four mb-4">
                         <h2 class="mb-2">{!! __('Pourquoi <span>:brand</span> ?', ['brand' => e(config('safar.nom'))]) !!}</h2>
@@ -341,86 +395,30 @@
 
     <!-- /Client Section -->
 
-
-<style>
-    .place-item {
-        cursor: pointer;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        border-radius: 12px;
-        overflow: hidden;
-        background: #fff;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        border: 1px solid #eee;
-    }
-    .place-item:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-    }
-    .place-img {
-        height: 220px;
-        position: relative;
-        overflow: hidden;
-        background: #f8f9fa;
-    }
-    .place-img img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        transition: transform 0.5s ease;
-    }
-    .place-item:hover .place-img img {
-        transform: scale(1.1);
-    }
-    .fav-item-overlay {
-        position: absolute;
-        top: 15px;
-        left: 0;
-        right: 0;
-        padding: 0 15px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        z-index: 10;
-        pointer-events: none;
-    }
-    .fav-item-overlay > * {
-        pointer-events: auto;
-    }
-    .fav-icon {
-        background: white;
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 50%;
-        color: #333;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.15);
-        transition: all 0.2s ease;
-    }
-    .fav-icon:hover {
-        transform: scale(1.1);
-        color: #ff4d4f;
-    }
-    .fav-icon i {
-        font-size: 18px;
-    }
-    .place-content {
-        padding: 20px;
-        flex-grow: 1;
-        display: flex;
-        flex-direction: column;
-    }
-    .date-info {
-        background: #f0f7ff;
-        border-radius: 8px;
-        color: #006ce4;
-    }
-</style>
+    <!-- Call to action -->
+    <section class="section pt-0 bl-cta-wrap">
+        <div class="container">
+            <div class="bl-cta">
+                <div>
+                    <h3>{{ __('Prêt à partir ?') }}</h3>
+                    <p>{{ __('Choisissez votre trajet et réservez votre siège en quelques minutes.') }}</p>
+                </div>
+                <a href="#search-form" class="btn btn-light btn-lg rounded-pill px-4" data-bl-to-search>{{ __('Chercher un bus') }} <i class="isax isax-search-normal-1 ms-1"></i></a>
+            </div>
+        </div>
+    </section>
 
     @push('scripts')
         <script src="{{ asset('assets/js/blasti-hero.js') . '?v=' . @filemtime(public_path('assets/js/blasti-hero.js')) }}"></script>
+        <script>
+            // "Chercher un bus": back up to the search card, below the sticky header
+            document.querySelectorAll('[data-bl-to-search]').forEach(function (link) {
+                link.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var card = document.querySelector('.banner-search-four');
+                    window.scrollTo({ top: card.getBoundingClientRect().top + window.scrollY - 120, behavior: 'smooth' });
+                });
+            });
+        </script>
     @endpush
 </x-app-layout>
