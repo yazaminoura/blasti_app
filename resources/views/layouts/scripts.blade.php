@@ -21,7 +21,6 @@
 @endif
 
 <!-- Fancybox JS -->
-<script src="{{asset('assets/plugins/fancybox/jquery.fancybox.min.js')}}"></script>
 
 <!-- Counter JS -->
 <script src="{{asset('assets/js/jquery.counterup.min.js')}}"></script>

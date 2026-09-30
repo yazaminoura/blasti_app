@@ -31,6 +31,7 @@
             // null = super admin only
             [null, 'admin.apparence.edit', 'admin.apparence.*', 'bi-palette', 'Apparence'],
             [null, 'admin.coordonnees.edit', 'admin.coordonnees.*', 'bi-telephone', 'Coordonnées'],
+            [null, 'admin.tarifs.edit', 'admin.tarifs.*', 'bi-graph-up-arrow', 'Tarifs par défaut'],
         ],
     ];
     $user = auth()->user();

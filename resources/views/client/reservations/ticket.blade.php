@@ -191,12 +191,10 @@
                                     <a href="{{ route('ticket.download', $reservation->id) }}" class="btn btn-primary btn-lg px-4 py-2">
                                         <i class="fas fa-download me-2"></i> {{ __('Télécharger le billet (PDF)') }}
                                     </a>
-                                    <a href="{{ \App\Support\WhatsApp::lien($reservation) }}" target="_blank" rel="noopener" class="btn bl-btn-whatsapp btn-lg px-4 py-2">
-                                        <i class="fab fa-whatsapp me-2"></i> {{ __('Envoyer sur WhatsApp') }}
-                                    </a>
+                                    @include('partials.whatsapp-pdf', ['billets' => $reservation, 'pdf' => \App\Support\WhatsApp::lienPdf($reservation), 'nom' => 'billet-' . $reservation->id . '.pdf', 'class' => 'btn bl-btn-whatsapp btn-lg px-4 py-2'])
                                 @endunless
                                 @if (auth()->id() === $reservation->user_id && $reservation->canBeCancelledByClient())
-                                    <form method="POST" action="{{ route('client.reservations.cancel', $reservation) }}" onsubmit="return confirm(@json($reservation->cancelConfirmText()));">
+                                    <form method="POST" action="{{ route('client.reservations.cancel', $reservation) }}" data-bl-confirm="{{ __('Annuler ce billet ?') }}" data-bl-confirm-text="{{ $reservation->cancelConfirmText() }}" data-bl-confirm-button="{{ __('Oui, annuler le billet') }}" data-bl-danger>
                                         @csrf
                                         <button type="submit" class="btn btn-outline-danger btn-lg px-4 py-2"><i class="isax isax-close-circle me-1"></i> {{ __('Annuler le billet') }}</button>
                                     </form>

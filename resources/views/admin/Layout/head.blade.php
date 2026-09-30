@@ -7,7 +7,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <title>@yield('title', 'Administration') | {{ config('safar.nom') }} Admin</title>
-    <link rel="icon" type="image/png" href="{{ \App\Support\BrandImages::url('blasti-icon.png') }}" />
+    @include('partials.favicon')
 
     {{-- Theme (light / dark / system) and collapsed sidebar, applied before the first paint to avoid a flash --}}
     <script>
@@ -15,7 +15,9 @@
             var root = document.documentElement, choice = 'auto', collapsed = false;
             try {
                 choice = localStorage.getItem('safar-admin-theme') || 'auto';
-                collapsed = localStorage.getItem('safar-admin-sidebar') === 'collapsed';
+                var stored = localStorage.getItem('safar-admin-sidebar');
+                // no choice yet: icons-only menu on a tablet held sideways (992-1279 px), full menu on a computer
+                collapsed = stored ? stored === 'collapsed' : (window.innerWidth >= 992 && window.innerWidth < 1280);
             } catch (e) {}
             var dark = choice === 'dark' || (choice === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
             root.setAttribute('data-bs-theme', dark ? 'dark' : 'light');
@@ -34,6 +36,7 @@
     @endif
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11.17.2/dist/sweetalert2.min.css">
+    <link rel="stylesheet" href="{{ asset('assets/css/blasti-popups.css') }}?v={{ @filemtime(public_path('assets/css/blasti-popups.css')) }}">
     <link rel="stylesheet" href="{{ asset('assets/admin/safar-admin.css') }}?v={{ @filemtime(public_path('assets/admin/safar-admin.css')) }}">
 
     {{-- Brand color chosen in Paramètres > Apparence; every accent of the admin derives from it --}}

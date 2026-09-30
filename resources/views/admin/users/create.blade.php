@@ -25,7 +25,7 @@
             </div>
             <x-admin.field type="select" name="role" label="Rôle" col="col-md-6" empty="Aucun rôle"
                            :options="$roles->pluck('name', 'id')" hint="Laissez « Aucun rôle » pour un client." />
-            <x-admin.field type="select" name="societe_id" label="Compagnie (espace compagnie)" col="col-md-6" empty="Toutes (équipe BLASTI)"
+            <x-admin.field type="select" name="societe_id" label="Compagnie (espace compagnie)" col="col-md-6" :empty="'Toutes (équipe ' . config('safar.nom') . ')'"
                            :options="$societes->pluck('raison_social', 'id')" hint="Un compte lié à une compagnie ne voit que ses autocars, voyages, billets et avis." />
         </x-admin.form-section>
     @endif

@@ -687,10 +687,6 @@ a { text-decoration: none; }
 .sa-contrast { font-size: .78rem; display: flex; align-items: center; gap: .4rem; }
 
 /* ---------- SweetAlert ---------- */
-.sa-swal { border-radius: 16px !important; background: var(--sa-surface) !important; color: var(--sa-text) !important; font-family: inherit; }
-.swal2-title { font-size: 1.15rem !important; }
-.swal2-html-container { color: var(--sa-muted) !important; font-size: .9rem !important; }
-.swal2-toast { background: var(--sa-surface) !important; color: var(--sa-text) !important; box-shadow: var(--sa-shadow-lg) !important; border: 1px solid var(--sa-border); }
 
 /* ---------- Utilities ---------- */
 .sa-gap { display: grid; gap: 1.25rem; }
@@ -778,3 +774,30 @@ a[data-sa-row]:hover { background: var(--sa-surface-2); }
 .sa-seat-dot { display: inline-block; width: 12px; height: 12px; border-radius: 4px; border: 1px solid var(--sa-border); background: var(--sa-surface); vertical-align: -1px; margin-inline-end: .25rem; }
 .sa-seat-dot.is-selected { background: var(--brand); border-color: var(--brand); }
 .sa-seat-dot.is-taken { background: var(--sa-surface-3); border-style: dashed; }
+
+
+/* ---------- Tablets (768-1279 px): tables fit, prices on one line, row buttons always visible ---------- */
+.sa-table td.text-end, .sa-table th.text-end { white-space: nowrap; }
+@media (max-width: 1279.98px) {
+    .sa-table { font-size: .875rem; }
+    .sa-table > :not(caption) > * > * { padding: .7rem .6rem; }
+    .sa-table > :not(caption) > * > *:first-child { padding-inline-start: 1rem; }
+    .sa-table > :not(caption) > * > *:last-child { padding-inline-end: 1rem; }
+    .sa-table .sa-sub, .sa-table .sa-cell-muted { font-size: .74rem; }
+    .sa-table .sa-avatar { display: none; }
+    .sa-table .form-control-sm, .sa-table .form-select-sm { font-size: .82rem; }
+    /* the column of action buttons stays pinned to the edge while the table scrolls sideways */
+    .sa-table:has(.sa-row-actions) tr > :last-child {
+        position: sticky; inset-inline-end: 0; z-index: 1;
+        background: var(--sa-surface);
+        box-shadow: -10px 0 10px -10px rgba(15, 23, 42, .35);
+    }
+    .sa-table:has(.sa-row-actions) thead tr > :last-child { background: var(--sa-surface-2); }
+    .sa-table:has(.sa-row-actions) tbody tr:hover > :last-child { background: var(--sa-surface-2); }
+    .sa-page-header { gap: .75rem; }
+    .sa-page-actions .btn { padding-inline: .8rem; }
+    .sa-card-header { padding-inline: 1rem; }
+}
+
+/* a column left out on tablets (768-1279 px) when a table is too wide */
+@media (min-width: 768px) and (max-width: 1279.98px) { .sa-table .sa-hide-md { display: none; } }

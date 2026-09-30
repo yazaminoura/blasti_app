@@ -64,6 +64,11 @@ class VoyageController extends Controller
 
         $stops = $formFields['arrets'] ?? [];
         unset($formFields['arrets']);
+        // own price rules, or null = the default ones
+        $formFields['majorations'] = $request->input('tarif_mode') === 'propre'
+            ? \App\Support\Tarif::nettoyer($request->input('majorations', []))
+            : null;
+        unset($formFields['tarif_mode']);
 
         DB::transaction(function () use ($formFields, $stops) {
             Voyage::create($formFields)->syncArrets($stops);
@@ -185,6 +190,11 @@ class VoyageController extends Controller
 
         $stops = $formFields['arrets'] ?? [];
         unset($formFields['arrets']);
+        // own price rules, or null = the default ones
+        $formFields['majorations'] = $request->input('tarif_mode') === 'propre'
+            ? \App\Support\Tarif::nettoyer($request->input('majorations', []))
+            : null;
+        unset($formFields['tarif_mode']);
 
         // Reservations keep a copy of their segment (tickets, exports, filters): keep them in sync
         // with their boarding / drop-off stops. The price already paid is not touched.

@@ -63,28 +63,6 @@ class ParametreController extends Controller
     }
 
     /**
-     * Delete the user's account.
-     */
-    public function destroy(Request $request): RedirectResponse
-    {
-        $request->validateWithBag('userDeletion', [
-            'password' => ['required', 'current_password'],
-        ]);
-
-        $user = $request->user();
-
-        Auth::logout();
-
-        $this->deleteStoredImage($user->image);
-        $user->delete();
-
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-
-        return Redirect::to('/');
-    }
-
-    /**
      * Remove an uploaded profile image from the public disk (never the bundled default avatars).
      */
     private function deleteStoredImage(?string $path): void

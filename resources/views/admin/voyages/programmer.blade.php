@@ -13,6 +13,7 @@
                      :back="route('voyages.index')" backLabel="Voyages" />
 
 <x-admin.form :action="route('voyages.programmer.store', $voyage)" method="POST" submit="Créer les voyages"
+              data-bl-confirm="Créer les voyages ?" data-bl-confirm-text="Un voyage est créé pour chaque jour choisi de la période (même bus, mêmes horaires, même prix). Les jours où le bus est déjà pris sont sautés." data-bl-confirm-button="Oui, créer" data-bl-glyph="calendar"
               hint="Même autocar, mêmes horaires, même prix et mêmes arrêts. Les jours où l'autocar est déjà en route sont ignorés.">
     <x-admin.form-section title="Période" description="Au maximum 3 mois à la fois." icon="bi-calendar-range">
         <x-admin.field name="du" label="Du" type="date" col="col-md-6" required :value="now()->addDay()->max($d->copy()->addDay())->toDateString()" />

@@ -19,14 +19,20 @@
         <a href="{{ route('ticket.download', $reservation->id) }}" class="btn btn-soft"><i class="bi bi-file-earmark-pdf"></i> Billet PDF</a>
     @endif
     @if ($canUpdate && ! $reservation->isCancelled() && $reservation->resteAPayer() > 0)
-        <form action="{{ route('reservation.admin.payer', $reservation) }}" method="POST" class="d-inline">
+        <form action="{{ route('reservation.admin.payer', $reservation) }}" method="POST" class="d-inline"
+              data-bl-confirm="Encaisser {{ number_format($reservation->resteAPayer(), 2, ',', ' ') }} DH ?"
+              data-bl-confirm-text="Réservation #{{ $reservation->id }}, siège {{ $reservation->num_siege }}. Le montant est ajouté à votre caisse et un reçu est envoyé au client."
+              data-bl-confirm-button="Oui, encaisser" data-bl-glyph="cash">
             @csrf
             @method('PATCH')
             <button type="submit" class="btn btn-primary"><i class="bi bi-cash-coin"></i> Marquer payée</button>
         </form>
     @endif
     @if (auth()->user()->hasPermission('reservations.rembourser') && $reservation->needsRefund())
-        <form action="{{ route('reservation.admin.rembourser', $reservation) }}" method="POST" class="d-inline">
+        <form action="{{ route('reservation.admin.rembourser', $reservation) }}" method="POST" class="d-inline"
+              data-bl-confirm="Marquer {{ number_format($reservation->amountToRefund(), 2, ',', ' ') }} DH comme remboursés ?"
+              data-bl-confirm-text="À faire seulement quand l'argent a vraiment été rendu au client. Cette information ne peut pas être retirée."
+              data-bl-confirm-button="Oui, c'est remboursé" data-bl-glyph="refund">
             @csrf
             @method('PATCH')
             <button type="submit" class="btn btn-primary"><i class="bi bi-arrow-counterclockwise"></i> Marquer remboursée ({{ number_format($reservation->amountToRefund(), 2, ',', ' ') }} DH)</button>

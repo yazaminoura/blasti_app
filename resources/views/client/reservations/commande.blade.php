@@ -36,7 +36,7 @@
                 </div>
                 @if ($actifs->isNotEmpty())
                     <div class="d-flex flex-wrap gap-2">
-                        <a href="{{ \App\Support\WhatsApp::lien($actifs) }}" target="_blank" rel="noopener" class="btn bl-btn-whatsapp rounded-pill px-4 fw-semibold"><i class="fab fa-whatsapp me-1"></i>{{ __('Envoyer sur WhatsApp') }}</a>
+                        @include('partials.whatsapp-pdf', ['billets' => $actifs, 'pdf' => route('client.commande.download', $commande), 'nom' => 'billets-' . $commande . '.pdf', 'class' => 'btn bl-btn-whatsapp rounded-pill px-4 fw-semibold'])
                         <a href="{{ route('client.commande.download', $commande) }}" class="btn btn-light rounded-pill px-4 fw-semibold"><i class="isax isax-document-download me-1"></i>{{ $actifs->count() > 1 ? __('Tous les billets (PDF)') : __('Billet (PDF)') }}</a>
                     </div>
                 @endif

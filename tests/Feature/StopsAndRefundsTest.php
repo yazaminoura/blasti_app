@@ -27,7 +27,7 @@ class StopsAndRefundsTest extends TestCase
     {
         parent::setUp();
         Mail::fake();
-        config(['safar.annulation.paliers' => [72 => 100, 48 => 80, 24 => 60, 0 => 50]]);
+        config(['safar.annulation.paliers' => [2 => 100, 1 => 90, 0 => 50]]);
 
         foreach (['Fès', 'Imouzzer', 'Meknès', 'Rabat'] as $nom) {
             $this->ville[$nom] = Ville::create(['ville' => $nom])->id;
@@ -201,39 +201,37 @@ class StopsAndRefundsTest extends TestCase
 
     // ---- Refund policy ----
 
-    private function paidTicketCancelledHoursBefore(float $hours): Reservation
+    /** Paid ticket (120 DH) cancelled by the client at $when (a closure getting the departure time). */
+    private function paidTicketCancelledAt(\Closure $when): Reservation
     {
         $this->book('Fès', 'Rabat', 1);
         $reservation = Reservation::sole();
         $reservation->markPaid('TEST');
-        $this->travelTo($reservation->departAt()->subMinutes((int) round($hours * 60)));
+        $this->travelTo($when($reservation->departAt()->copy()));
 
         $this->actingAs($reservation->user)->post(route('client.reservations.cancel', $reservation));
 
         return $reservation->fresh();
     }
 
-    public function test_refund_is_full_more_than_three_days_before(): void
+    public function test_refund_is_full_two_days_or_more_before(): void
     {
-        $r = $this->paidTicketCancelledHoursBefore(80);
+        $r = $this->paidTicketCancelledAt(fn ($d) => $d->subDays(2)->setTime(23, 50));
         $this->assertTrue($r->isCancelled());
         $this->assertEquals(120, $r->montant_rembourse);
         $this->assertEquals(0, $r->frais_annulation);
     }
 
-    public function test_refund_drops_close_to_departure(): void
+    public function test_refund_the_day_before_keeps_10_percent(): void
     {
-        $this->assertEquals(96, $this->paidTicketCancelledHoursBefore(60)->montant_rembourse);   // 80 %
+        // late in the evening before a morning bus: still "the day before" (calendar days, not hours)
+        $this->assertEquals(108, $this->paidTicketCancelledAt(fn ($d) => $d->subDay()->setTime(23, 50))->montant_rembourse);
+        $this->assertEquals(90, Reservation::refundPercent(1));
     }
 
-    public function test_refund_one_day_before(): void
+    public function test_refund_the_departure_day_keeps_half(): void
     {
-        $this->assertEquals(72, $this->paidTicketCancelledHoursBefore(30)->montant_rembourse);   // 60 %
-    }
-
-    public function test_refund_the_same_day(): void
-    {
-        $r = $this->paidTicketCancelledHoursBefore(3);                                           // 50 %
+        $r = $this->paidTicketCancelledAt(fn ($d) => $d->subMinutes(30));
         $this->assertEquals(60, $r->montant_rembourse);
         $this->assertEquals(60, $r->frais_annulation);
         $this->assertTrue($r->needsRefund());

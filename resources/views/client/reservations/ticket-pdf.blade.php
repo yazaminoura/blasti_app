@@ -9,6 +9,9 @@
     $bus = $img('blasti-bus.png');
     $brand = config('safar.couleur');
     $dh = fn ($n) => number_format($n, 2, ',', ' ') . ' DH';
+    // Arabic: long sentences cut into lines before being turned right to left (App\Support\ArabePdf)
+    $rtl = app()->getLocale() === 'ar';
+    $long = fn (string $texte, int $max) => $rtl ? new \Illuminate\Support\HtmlString(\App\Support\ArabePdf::lignes($texte, $max)) : $texte;
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -17,7 +20,8 @@
     <title>{{ __('Billet de Voyage') }}</title>
     <style>
         @page { margin: 0; }
-        body { margin: 0; font-family: Arial, sans-serif; color: #1e293b; font-size: 14px; }
+        /* Arial has no Arabic letters: DejaVu Sans (shipped with DomPDF) in Arabic, see App\Support\BilletPdf */
+        body { margin: 0; font-family: {!! app()->getLocale() === 'ar' ? '"DejaVu Sans"' : 'Arial' !!}, sans-serif; color: #1e293b; font-size: 14px; }
         /* A5 landscape = 595 x 420 pt: sized in pt so the pass fills the sheet */
         .page { width: 100%; height: 419pt; position: relative; }
         .page-break { page-break-after: always; }
@@ -48,6 +52,18 @@
         .seat-big { font-size: 56px; font-weight: bold; color: {{ $brand }}; line-height: 1; }
         .foot { position: absolute; left: 0; right: 0; bottom: 0; height: 46px; background: #f1f5f9; color: #64748b; font-size: 12px; }
         .foot td { padding: 0 32px; vertical-align: middle; }
+        @if ($rtl)
+            /* DejaVu Sans is wider than Arial: a bit smaller, no letter spacing (it breaks the joined letters) */
+            body { font-size: 12.5px; }
+            .label, .band .title { letter-spacing: 0; text-transform: none; }
+            .city { font-size: 27px; white-space: nowrap; }
+            .time { font-size: 22px; }
+            .val { font-size: 15.5px; }
+            .seat-big { font-size: 48px; }
+            .grid td { padding: 8px 10px 8px 0; }
+            .grid .date { font-size: 11px; }
+            .foot { font-size: 11px; }
+        @endif
     </style>
 </head>
 <body>
@@ -110,7 +126,7 @@
                             <td>
                                 {{-- no paid / to-pay stamp: the controller always scans the QR code to know --}}
                                 <div class="label" style="margin-bottom: 3px;">{{ __('Paiement') }}</div>
-                                <div class="date" style="line-height: 1.4;">{{ __('Vérifié en scannant le QR code. Vous payez au guichet ou à bord ? Vous recevez un reçu par e-mail : pas de reçu = signalez-le au :telephone.', ['telephone' => config('safar.contact.telephone')]) }}</div>
+                                <div class="date" style="line-height: 1.4;">{{ $long(__('Vérifié en scannant le QR code. Vous payez au guichet ou à bord ? Vous recevez un reçu par e-mail : pas de reçu = signalez-le au :telephone.', ['telephone' => config('safar.contact.telephone')]), 36) }}</div>
                             </td>
                         </tr>
                     </table>
@@ -132,7 +148,7 @@
 
         <table class="foot" width="100%">
             <tr>
-                <td>{{ __('Présentez ce billet (imprimé ou sur votre téléphone) 15 minutes avant le départ, avec une pièce d\'identité.') }}</td>
+                <td>{{ $long(__('Présentez ce billet (imprimé ou sur votre téléphone) 15 minutes avant le départ, avec une pièce d\'identité.'), 60) }}</td>
                 <td align="right" style="white-space: nowrap;">{{ config('safar.contact.telephone') }} · {{ config('safar.contact.email') }}</td>
             </tr>
         </table>

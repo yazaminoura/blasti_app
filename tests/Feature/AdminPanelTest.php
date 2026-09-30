@@ -178,7 +178,7 @@ class AdminPanelTest extends TestCase
         $this->actingAs($this->superAdmin)
             ->get(route('admin.apparence.edit'))
             ->assertOk()
-            ->assertSee('Bleu Blasti');
+            ->assertSee('Bleu du logo');
 
         $this->actingAs($this->superAdmin)
             ->put(route('admin.apparence.update'), ['nom' => 'Safar Voyages', 'couleur' => '#c2410c'])

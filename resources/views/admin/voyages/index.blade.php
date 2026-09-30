@@ -72,7 +72,7 @@
                     <tr>
                         <th>Trajet</th>
                         <th>Départ</th>
-                        <th>Arrivée</th>
+                        <th class="sa-hide-md">Arrivée</th>
                         <th>Autocar</th>
                         <th>Remplissage</th>
                         <th class="text-end">Prix</th>
@@ -103,7 +103,7 @@
                                 <div class="sa-strong">{{ \Carbon\Carbon::parse($voyage->date_depart)->format('d/m/Y') }}</div>
                                 <div class="sa-sub">{{ \Carbon\Carbon::parse($voyage->heure_depart)->format('H:i') }}</div>
                             </td>
-                            <td class="sa-num">
+                            <td class="sa-num sa-hide-md">
                                 <div>{{ \Carbon\Carbon::parse($voyage->date_arrivee)->format('d/m/Y') }}</div>
                                 <div class="sa-sub">{{ \Carbon\Carbon::parse($voyage->heure_arrivee)->format('H:i') }}</div>
                             </td>

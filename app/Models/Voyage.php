@@ -10,6 +10,9 @@ class Voyage extends Model
 
     protected $guarded=['id'];
 
+    // own "closer departure = higher price" rules; null = the default ones (App\Support\Tarif)
+    protected $casts = ['majorations' => 'array'];
+
     /** Filter keys understood by scopeFilter() (admin list). */
     public const FILTERS = ['ville_depart_id', 'ville_arrivee_id', 'type_voyage_id', 'date_from', 'date_to', 'statut'];
 
@@ -154,8 +157,29 @@ class Voyage extends Model
         return $a && $b && $b->ordre > $a->ordre ? [$a, $b] : null;
     }
 
-    /** Price of a segment (prices are stored from the first stop). */
-    public function segmentPrice(VoyageArret $a, VoyageArret $b): float
+    /**
+     * Price of a segment TODAY: base price + the "closer departure" increase (App\Support\Tarif).
+     * Every booking (website, counter, ticket change) goes through here.
+     */
+    public function segmentPrice(VoyageArret $a, VoyageArret $b, ?\Carbon\Carbon $at = null): float
+    {
+        $base = $this->segmentBasePrice($a, $b);
+
+        return round($base + \App\Support\Tarif::majoration($base, $a->passage_at, $at, $this->majorations), 2);
+    }
+
+    /** Whole trip, today's price (lists, wishlist, company page). */
+    public function prixActuel(): float
+    {
+        $arrets = $this->arrets;
+
+        return $arrets->count() >= 2
+            ? $this->segmentPrice($arrets->first(), $arrets->last())
+            : round((float) $this->prix + \App\Support\Tarif::majoration((float) $this->prix, $this->departAt(), null, $this->majorations), 2);
+    }
+
+    /** Base price of a segment (prices are stored from the first stop). */
+    public function segmentBasePrice(VoyageArret $a, VoyageArret $b): float
     {
         return round(max(0, $b->prix - $a->prix), 2);
     }

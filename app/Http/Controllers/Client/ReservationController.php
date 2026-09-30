@@ -154,7 +154,7 @@ class ReservationController extends Controller
         $billets = $this->ownedOrder($commande)->reject->isCancelled()->values();
         abort_if($billets->isEmpty(), 404, __('Ce billet a été annulé.'));
 
-        return Pdf::loadView('client.reservations.ticket-pdf', ['reservations' => $billets])
+        return \App\Support\BilletPdf::make($billets)
             ->setPaper('a5', 'landscape')
             ->download('billets-' . $commande . '.pdf');
     }
@@ -349,7 +349,7 @@ class ReservationController extends Controller
         abort_if($reservation->isCancelled(), 410, __('Ce billet a été annulé.'));
         $reservation->loadMissing(['user', 'villeDepart', 'villeArrivee', 'modeReglement', 'autocar.societe']);
 
-        return Pdf::loadView('client.reservations.ticket-pdf', compact('reservation'))
+        return \App\Support\BilletPdf::make($reservation)
             ->setPaper('a5', 'landscape')
             ->stream('billet-' . $reservation->id . '.pdf');
     }
@@ -382,7 +382,7 @@ class ReservationController extends Controller
         $reservation = $this->findOwnedReservation($id);
         abort_if($reservation->isCancelled(), 404, __('Ce billet a été annulé.'));
 
-        $pdf = Pdf::loadView('client.reservations.ticket-pdf', compact('reservation'))
+        $pdf = \App\Support\BilletPdf::make($reservation)
             ->setPaper('a5', 'landscape');
 
         return $pdf->download('ticket-' . $reservation->id . '.pdf');

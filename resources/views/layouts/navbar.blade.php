@@ -27,7 +27,7 @@
                                     <img src="{{ \App\Support\BrandImages::url('blasti-logo-dark.png') }}" alt="Blasti" style="height: 48px; width: auto;">
                                 </a>
                                 <div class="offcanvas-close">
-                                    <i class="ti ti-x"></i>
+                                    <i class="fa-solid fa-xmark"></i>
                                 </div>
                             </div>
                             <div class="wishlist-info d-flex justify-content-between align-items-center">

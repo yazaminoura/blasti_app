@@ -43,7 +43,8 @@
                             <div class="sa-person">
                                 <span class="sa-avatar">{{ mb_substr($user->name, 0, 2) }}</span>
                                 <div>
-                                    <div class="sa-strong">{{ $user->name }} @if ($user->is($me))<span class="sa-chip muted ms-1">Vous</span>@endif</div>
+                                    <div class="sa-strong">{{ $user->name }} @if ($user->is($me))<span class="sa-chip muted ms-1">Vous</span>@endif
+                                        @if ($user->desactive_le)<span class="sa-chip danger ms-1">Désactivé</span>@endif</div>
                                     <div class="sa-sub">{{ $user->telephone ?: 'N° ' . $user->id }}</div>
                                 </div>
                             </div>

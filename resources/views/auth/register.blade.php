@@ -16,7 +16,7 @@
                             <div class="card-header">
                                 <div class="text-center">
                                     <h5 class="mb-1">{{ __('Inscription') }}</h5>
-                                    <p>{{ __('Créez votre compte BLASTI') }}</p>
+                                    <p>{{ __('Créez votre compte :brand', ['brand' => config('safar.nom')]) }}</p>
                                 </div>
                             </div>
                             <div class="card-body">

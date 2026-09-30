@@ -1,20 +1,16 @@
-{{-- Refund policy table, built from config('safar.annulation.paliers'). Param: $compact (small text under a form) --}}
+{{-- Refund policy table, built from config('safar.annulation.paliers') (calendar days). Param: $compact (small text under a form) --}}
 @php
+    // days before the departure day => % refunded
     $steps = config('safar.annulation.paliers', []);
     krsort($steps);
-    $duree = fn (int $h) => $h >= 24 && $h % 24 === 0
-        ? trans_choice(':n jour|:n jours', intdiv($h, 24), ['n' => intdiv($h, 24)])
-        : __(':n h', ['n' => $h]);
     $rows = [];
-    $upper = null;
-    foreach ($steps as $hours => $percent) {
+    foreach ($steps as $jours => $percent) {
         $label = match (true) {
-            $upper === null => __('Plus de :d avant le départ', ['d' => $duree($hours)]),
-            $hours === 0 => __('Moins de :d avant le départ', ['d' => $duree($upper)]),
-            default => __('Entre :a et :b avant le départ', ['a' => $duree($hours), 'b' => $duree($upper)]),
+            $jours === 0 => __('Le jour du départ'),
+            $jours === 1 => __('La veille du départ'),
+            default => __(':n jours ou plus avant le départ', ['n' => $jours]),
         };
         $rows[] = [$label, $percent];
-        $upper = $hours;
     }
 @endphp
 @if (! empty($compact))

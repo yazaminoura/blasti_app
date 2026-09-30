@@ -56,6 +56,14 @@ class LoginRequest extends FormRequest
             ]);
         }
 
+        // closed account (Admin > Utilisateurs & rôles > Désactiver): the password is right but the door stays shut
+        if (Auth::user()?->desactive_le) {
+            Auth::guard('web')->logout();
+            throw ValidationException::withMessages([
+                'email' => trans('Ce compte est désactivé. Contactez l\'administrateur.'),
+            ]);
+        }
+
         RateLimiter::clear($this->throttleKey());
     }
 

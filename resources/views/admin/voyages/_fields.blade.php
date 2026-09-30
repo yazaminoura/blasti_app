@@ -121,6 +121,8 @@
                    min="0" step="0.01" placeholder="0,00" :value="$voyage?->prix" />
 </x-admin.form-section>
 
+@include('admin.voyages._tarifs')
+
 <x-admin.form-section title="Image" description="Affichée sur la fiche du voyage, côté site." icon="bi-image">
     <x-admin.upload name="image" label="Image du voyage" :current="$voyage?->image" hint="JPG, PNG ou WEBP, 2 Mo maximum." />
 </x-admin.form-section>

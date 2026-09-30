@@ -216,6 +216,34 @@ class UserController extends Controller
     }
 
     /**
+     * Super admin: close a team account, or open it again. Closed = cannot log in, logged out everywhere now;
+     * the account stays, so its sales, scans and cash payments keep a name.
+     */
+    public function desactiver(User $user)
+    {
+        $moi = auth()->user();
+        abort_unless($moi->isSuperAdmin(), 403, 'Seul le super administrateur peut désactiver un compte.');
+        abort_if($user->is($moi), 403, 'Vous ne pouvez pas désactiver votre propre compte.');
+
+        if ($user->desactive_le) {
+            $user->forceFill(['desactive_le' => null, 'desactive_par' => null])->save();
+
+            return back()->with('success', 'Compte de ' . $user->name . ' réactivé : il peut de nouveau se connecter.');
+        }
+
+        // never close the last super admin (nobody could manage the team any more)
+        if ($user->isSuperAdmin() && User::where('isadmin', 1)->whereNull('desactive_le')->whereNull('societe_id')
+                ->whereDoesntHave('roles')->count() <= 1) {
+            return back()->with('error', 'C\'est le dernier super administrateur actif : il ne peut pas être désactivé.');
+        }
+
+        $user->forceFill(['desactive_le' => now(), 'desactive_par' => $moi->id])->save();
+        \App\Support\SessionUnique::deconnecterPartout($user);
+
+        return back()->with('success', 'Compte de ' . $user->name . ' désactivé : il ne peut plus se connecter. Son historique (ventes, scans, encaissements) est conservé.');
+    }
+
+    /**
      * Reset the user's password.
      */
     public function updatePassword(Request $request, User $user)
@@ -238,18 +266,30 @@ class UserController extends Controller
      */
     public function destroy(User $user)
     {
+        // team account: super admin only, never yourself nor the last super admin.
+        // Its sales, scans and cash payments stay but lose the name ("Désactiver" keeps it).
         if ($user->isadmin) {
-            return back()->with('error', 'Vous ne pouvez pas supprimer un administrateur.');
+            $moi = auth()->user();
+            abort_unless($moi->isSuperAdmin(), 403, 'Seul le super administrateur peut supprimer un compte de l\'équipe.');
+            abort_if($user->is($moi), 403, 'Vous ne pouvez pas supprimer votre propre compte.');
+            if ($user->isSuperAdmin() && User::where('isadmin', 1)->whereNull('desactive_le')->whereNull('societe_id')
+                    ->whereDoesntHave('roles')->count() <= 1) {
+                return back()->with('error', 'C\'est le dernier super administrateur : il ne peut pas être supprimé.');
+            }
         }
 
-        // Optional: Check if user has active reservations before deleting
-        if ($user->reservations()->exists()) {
-            return back()->with('error', 'Cet utilisateur a des réservations actives et ne peut pas être supprimé.');
+        // a traveller's own bookings keep their account
+        if ($user->reservations()->withoutGlobalScopes()->exists()) {
+            return back()->with('error', 'Ce compte a des réservations à son nom : il ne peut pas être supprimé. Désactivez-le plutôt.');
         }
 
+        $nom = $user->name;
+        \App\Support\SessionUnique::deconnecterPartout($user);
+        $user->roles()->detach();
         $user->delete();
 
-        return back()->with('success', 'Utilisateur supprimé avec succès.');
+        return redirect()->route($user->isadmin ? 'admin.users.index' : 'admin.clients.index')
+            ->with('success', 'Compte de ' . $nom . ' supprimé.');
     }
 
     /** Search box of the user lists: name, email or phone. */

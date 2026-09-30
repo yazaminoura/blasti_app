@@ -27,7 +27,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
     <title>@yield('code') · @yield('title') | {{ $nom }}</title>
-    <link rel="icon" href="{{ asset('assets/img/blasti-icon.png') }}" type="image/png">
+    @include('partials.favicon')
     <script>try { if (localStorage.getItem('darkMode') === 'enabled') document.documentElement.classList.add('dark'); } catch (e) {}</script>
     <style>
         :root { --brand: {{ $brand }}; --bg: #f4f7fb; --card: #fff; --text: #0f172a; --muted: #64748b; --line: #e5eaf2; }

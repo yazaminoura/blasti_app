@@ -16,18 +16,47 @@
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                 <div class="d-flex flex-wrap gap-4">
                     <div><div class="sa-sub">État</div>
-                        <span class="sa-chip {{ $enLigne ? 'success' : 'muted' }} dot">{{ $enLigne ? 'Connecté' : 'Hors ligne' }}</span></div>
+                        @if ($user->desactive_le)
+                            <span class="sa-chip danger dot">Désactivé le {{ \Carbon\Carbon::parse($user->desactive_le)->format('d/m/Y') }}</span>
+                        @else
+                            <span class="sa-chip {{ $enLigne ? 'success' : 'muted' }} dot">{{ $enLigne ? 'Connecté' : 'Hors ligne' }}</span>
+                        @endif
+                    </div>
                     <div><div class="sa-sub">Dernière connexion</div>
                         <div class="sa-strong">{{ $user->derniere_connexion_le ? \Carbon\Carbon::parse($user->derniere_connexion_le)->format('d/m/Y H:i') : 'Jamais' }}</div></div>
                     <div><div class="sa-sub">Appareil</div><div class="sa-strong">{{ $user->derniere_connexion_appareil ?? '—' }}</div></div>
                     <div><div class="sa-sub">Adresse IP</div><div class="sa-strong sa-mono">{{ $user->derniere_connexion_ip ?? '—' }}</div></div>
                 </div>
                 @if (auth()->user()->isSuperAdmin() && ! $user->is(auth()->user()))
+                    <div class="d-flex flex-wrap gap-2">
+                    <form method="POST" action="{{ route('admin.users.desactiver', $user) }}" onsubmit="confirmDelete(event, this)"
+                          @if ($user->desactive_le)
+                              data-confirm="Réactiver le compte de {{ $user->name }} ?" data-confirm-text="Il pourra de nouveau se connecter avec son mot de passe." data-confirm-button="Oui, réactiver"
+                          @else
+                              data-confirm="Désactiver le compte de {{ $user->name }} ?" data-confirm-text="Il est déconnecté tout de suite et ne peut plus se connecter. Son historique (ventes, scans, encaissements) est conservé. Vous pourrez le réactiver." data-confirm-button="Oui, désactiver"
+                          @endif>
+                        @csrf
+                        @method('PATCH')
+                        @if ($user->desactive_le)
+                            <button class="btn btn-soft"><i class="bi bi-unlock"></i> Réactiver le compte</button>
+                        @else
+                            <button class="btn btn-soft text-danger"><i class="bi bi-lock"></i> Désactiver le compte</button>
+                        @endif
+                    </form>
                     <form method="POST" action="{{ route('admin.users.deconnecter', $user) }}" onsubmit="confirmDelete(event, this)"
                           data-confirm="Déconnecter {{ $user->name }} de tous ses appareils ?" data-confirm-text="Il devra se reconnecter avec son mot de passe." data-confirm-button="Oui, déconnecter">
                         @csrf
                         <button class="btn btn-soft text-danger"><i class="bi bi-box-arrow-right"></i> Déconnecter partout</button>
                     </form>
+                    <form method="POST" action="{{ route('admin.users.destroy', $user) }}" onsubmit="confirmDelete(event, this)"
+                          data-confirm="Supprimer définitivement le compte de {{ $user->name }} ?"
+                          data-confirm-text="Le compte disparaît pour de bon. Ses ventes, scans et encaissements restent, mais sans son nom (« — »). Pour garder son nom dans l'historique, choisissez plutôt « Désactiver »."
+                          data-confirm-button="Oui, supprimer">
+                        @csrf
+                        @method('DELETE')
+                        <button class="btn btn-danger"><i class="bi bi-trash3"></i> Supprimer le compte</button>
+                    </form>
+                    </div>
                 @endif
             </div>
         </x-admin.card>
@@ -50,7 +79,7 @@
                 </div>
                 <x-admin.field type="select" name="role" label="Rôle" col="col-md-6" empty="Aucun rôle"
                                :options="$roles->pluck('name', 'id')" :value="$user->roles->first()?->id" />
-                <x-admin.field type="select" name="societe_id" label="Compagnie (espace compagnie)" col="col-md-6" empty="Toutes (équipe BLASTI)"
+                <x-admin.field type="select" name="societe_id" label="Compagnie (espace compagnie)" col="col-md-6" :empty="'Toutes (équipe ' . config('safar.nom') . ')'"
                                :options="$societes->pluck('raison_social', 'id')" :value="$user->societe_id" hint="Un compte lié à une compagnie ne voit que ses autocars, voyages, billets et avis." />
             </x-admin.form-section>
         @endif

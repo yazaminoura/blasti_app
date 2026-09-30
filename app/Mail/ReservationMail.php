@@ -106,7 +106,7 @@ class ReservationMail extends Mailable
         // one PDF, one page (with its QR code) per seat
         return [
             Attachment::fromData(
-                fn () => Pdf::loadView('client.reservations.ticket-pdf', ['reservations' => $billets])->setPaper('a5', 'landscape')->output(),
+                fn () => \App\Support\BilletPdf::make($billets)->output(),
                 $nom . '.pdf'
             )->withMime('application/pdf'),
         ];

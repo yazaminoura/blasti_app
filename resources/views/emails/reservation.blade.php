@@ -82,7 +82,7 @@
                         </p>
                         @if ($r->canBeCancelledByClient())
                             <p style="margin:16px 0 0; font-size:12px; color:#6b7280; text-align:center;">
-                                {{ __('Un empêchement ? Vous pouvez annuler depuis votre espace jusqu\'au départ du bus. Remboursement d\'un billet payé : 100 % plus de 3 jours avant, puis dégressif.') }}
+                                {{ __('Un empêchement ? Vous pouvez annuler depuis votre espace jusqu\'au départ du bus. Billet payé : remboursé à 100 % jusqu\'à 2 jours avant, 90 % la veille, 50 % le jour du départ.') }}
                             </p>
                         @endif
                     @endif

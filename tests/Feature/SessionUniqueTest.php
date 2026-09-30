@@ -66,6 +66,60 @@ class SessionUniqueTest extends TestCase
         $this->actingAs($client->fresh())->get(route('client.profile.reservations.index'))->assertOk();
     }
 
+    public function test_a_closed_account_cannot_log_in_and_keeps_its_history(): void
+    {
+        $staff = $this->staff();
+        $jeton = $this->login($staff);
+        $admin = User::factory()->create(['isadmin' => 1]);
+
+        $this->actingAs($admin)->patch(route('admin.users.desactiver', $staff))->assertSessionHas('success');
+        $this->assertNotNull($staff->fresh()->desactive_le);
+        $this->flushSession();
+
+        // the open session ends at the next click, and the password no longer opens the door
+        $this->actingAs($staff->fresh())->withSession([SessionUnique::CLE => $jeton])->get(route('admin'))->assertRedirect(route('login'));
+        $this->flushSession();
+        auth()->forgetGuards();
+        $this->post('/login', ['email' => $staff->email, 'password' => '11223344'])->assertSessionHasErrors('email');
+        $this->assertGuest();
+        $this->assertNotNull(User::find($staff->id)); // never deleted
+
+        // opened again: login works
+        $this->actingAs($admin)->patch(route('admin.users.desactiver', $staff))->assertSessionHas('success');
+        $this->flushSession();
+        auth()->forgetGuards();
+        $this->post('/login', ['email' => $staff->email, 'password' => '11223344'])->assertSessionHasNoErrors();
+    }
+
+    public function test_the_super_admin_can_delete_a_team_account_and_its_history_stays(): void
+    {
+        $staff = $this->staff();
+        $admin = User::factory()->create(['isadmin' => 1]);
+        $scan = \App\Models\Scan::create(['user_id' => $staff->id, 'resultat' => 'valable']);
+
+        // a staff member cannot delete another team account
+        $this->actingAs($this->staff())->delete(route('admin.users.destroy', $staff))->assertForbidden();
+
+        $this->actingAs($admin)->delete(route('admin.users.destroy', $staff))->assertRedirect(route('admin.users.index'));
+        $this->assertNull(User::find($staff->id));
+        $this->assertNotNull($scan->fresh());          // the scan is still there...
+        $this->assertNull($scan->fresh()->user_id);    // ...without the name
+
+        // never yourself, never the last super admin
+        $this->actingAs($admin)->delete(route('admin.users.destroy', $admin))->assertForbidden();
+    }
+
+    public function test_the_last_super_admin_and_yourself_cannot_be_closed(): void
+    {
+        $admin = User::factory()->create(['isadmin' => 1]);
+        $autre = User::factory()->create(['isadmin' => 1]);
+
+        $this->actingAs($admin)->patch(route('admin.users.desactiver', $admin))->assertForbidden();
+        $this->actingAs($admin)->patch(route('admin.users.desactiver', $autre))->assertSessionHas('success'); // 2 super admins: ok
+        $this->actingAs($autre->fresh())->patch(route('admin.users.desactiver', $admin)); // $autre is closed now
+        $this->assertNull($admin->fresh()->desactive_le);
+    }
+
     public function test_the_super_admin_logs_a_team_account_out_everywhere(): void
     {
         $staff = $this->staff();

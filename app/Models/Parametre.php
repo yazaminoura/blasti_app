@@ -14,7 +14,9 @@ class Parametre extends Model
 {
     protected $table = 'parametres';
 
-    protected $fillable = ['nom', 'couleur', 'telephone', 'email', 'adresse', 'facebook', 'instagram', 'tiktok', 'x', 'linkedin'];
+    protected $fillable = ['nom', 'couleur', 'telephone', 'email', 'adresse', 'facebook', 'instagram', 'tiktok', 'x', 'linkedin', 'majorations'];
+
+    protected $casts = ['majorations' => 'array'];
 
     /** Column => config key (empty columns keep the .env / config default). */
     public const CONFIG = [
@@ -47,6 +49,10 @@ class Parametre extends Model
             if (filled($ligne->$champ ?? null)) {
                 config([$cle => $ligne->$champ]);
             }
+        }
+        // price by how far away the departure is (App\Support\Tarif)
+        if (is_array($ligne->majorations ?? null)) {
+            config(['safar.majorations' => $ligne->majorations]);
         }
     }
 

@@ -5,7 +5,7 @@
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
 
-        <title>{{ __('Mon compte') }} | BLASTI</title>
+        <title>{{ __('Mon compte') }} | {{ config('safar.nom') }}</title>
 
         {{-- same light / dark choice as the rest of the site (applied before the page is drawn: no white flash) --}}
         <script src="{{ asset('assets/js/theme-script.js') }}"></script>
@@ -22,8 +22,7 @@
 
 
     <!-- Favicon -->
-    <link rel="icon" href="{{ asset('assets\img\admin\logo.png') }}" type="image/x-icon">
-    <link rel="shortcut icon" href="{{ asset('assets\img\admin\logo.png') }}" type="image/x-icon">
+    @include('partials.favicon')
 
     @if(app()->getLocale() == 'ar')
         <link rel="stylesheet" href="{{ asset('assets/css/bootstrap.rtl.min.css') }}">
@@ -40,6 +39,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ asset('assets/css/style.css') . '?v=' . @filemtime(public_path('assets/css/style.css')) }}">
     <link rel="stylesheet" href="{{ asset('assets/css/blasti.css') . '?v=' . @filemtime(public_path('assets/css/blasti.css')) }}">
+    <link rel="stylesheet" href="{{ asset('assets/css/blasti-popups.css') . '?v=' . @filemtime(public_path('assets/css/blasti-popups.css')) }}">
     {{-- Main color chosen in Admin > Paramètres > Apparence (overrides the defaults of style.css) --}}
     <style>:root { --brand: {{ config('safar.couleur') }}; --brand-rgb: {{ \App\Models\Parametre::rgb(config('safar.couleur')) }}; }</style>
     </head>
@@ -53,12 +53,20 @@
             </div>
 
             <div class="coprright-footer">
-                <p class="fs-14">&copy; {{ date('Y') }} · {{ __('Tous droits réservés') }}, <a href="{{ route('home') }}" class="text-primary fw-medium">BLASTI</a>
+                <p class="fs-14">&copy; {{ date('Y') }} · {{ __('Tous droits réservés') }}, <a href="{{ route('home') }}" class="text-primary fw-medium">{{ config('safar.nom') }}</a>
                 </p>        </div>
     <!-- Scripts -->
     <script src="{{ asset('assets/js/jquery-3.7.1.min.js') }}"></script>
     <script src="{{ asset('assets/js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('assets/js/script.js') }}"></script>
+    {{-- popups + notifications (e.g. "logged out: account opened elsewhere", "account disabled") --}}
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11.17.2/dist/sweetalert2.all.min.js"></script>
+    <script src="{{ asset('assets/js/blasti-alert.js') . '?v=' . @filemtime(public_path('assets/js/blasti-alert.js')) }}"></script>
+    @foreach (['success', 'error', 'warning', 'info'] as $flash)
+        @if (session($flash))
+            <x-alert :type="$flash" :message="session($flash)" />
+        @endif
+    @endforeach
 
     
        <!-- Toggle Password Visibility -->

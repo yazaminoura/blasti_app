@@ -34,7 +34,7 @@
                                 <span
                                     class="avatar avatar-lg bg-primary rounded-circle d-flex align-items-center justify-content-center me-3"
                                     style="width: 60px; height: 60px; flex-shrink: 0;">
-                                    <i class="ti ti-phone text-white" style="font-size: 24px;"></i>
+                                    <i class="fa-solid fa-phone text-white" style="font-size: 24px;"></i>
                                 </span>
                                 <div class="contact-info-content">
                                     <p class="mb-0 text-muted small">{{ __('Soutien Client') }}</p>
@@ -47,7 +47,7 @@
                                 <span
                                     class="avatar avatar-lg bg-secondary rounded-circle d-flex align-items-center justify-content-center me-3"
                                     style="width: 60px; height: 60px; flex-shrink: 0;">
-                                    <i class="ti ti-mail text-white" style="font-size: 24px;"></i>
+                                    <i class="fa-solid fa-envelope text-white" style="font-size: 24px;"></i>
                                 </span>
                                 <div class="contact-info-content">
                                     <p class="mb-0 text-muted small">{{ __('Envoyez-nous un Email') }}</p>
@@ -60,7 +60,7 @@
                                 <span
                                     class="avatar avatar-lg bg-success rounded-circle d-flex align-items-center justify-content-center me-3"
                                     style="width: 60px; height: 60px; flex-shrink: 0;">
-                                    <i class="ti ti-map-pin text-white" style="font-size: 24px;"></i>
+                                    <i class="fa-solid fa-location-dot text-white" style="font-size: 24px;"></i>
                                 </span>
                                 <div class="contact-info-content">
                                     <p class="mb-0 text-muted small">{{ __('Notre Emplacement') }}</p>

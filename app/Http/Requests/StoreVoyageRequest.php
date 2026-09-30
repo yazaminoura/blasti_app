@@ -28,6 +28,12 @@ class StoreVoyageRequest extends FormRequest
             'arrets.*.ville_id' => 'required|exists:villes,id',
             'arrets.*.heure'   => 'required|date_format:H:i,H:i:s',
             'arrets.*.prix'    => 'required|numeric|min:0',
+            // price by date: default rules, or the voyage's own (App\Support\Tarif)
+            'tarif_mode'       => 'nullable|in:defaut,propre',
+            'majorations'      => 'nullable|array|max:10',
+            'majorations.*.jours'  => 'nullable|integer|min:0|max:365',
+            'majorations.*.type'   => 'nullable|in:montant,pourcentage',
+            'majorations.*.valeur' => 'nullable|numeric|min:0|max:100000',
         ];
     }
 

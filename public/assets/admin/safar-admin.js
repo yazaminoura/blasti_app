@@ -92,17 +92,21 @@
 // Usage: <form onsubmit="confirmDelete(event, this)" data-confirm="Question ?" data-confirm-button="Oui">
 function confirmDelete(event, form) {
     event.preventDefault();
-    Swal.fire({
+    // same popup as the website (assets/js/blasti-alert.js + assets/css/blasti-popups.css)
+    var bouton = form.dataset.confirmButton || 'Oui, supprimer';
+    BlastiAlert.fire({
+        type: 'warning',
         title: form.dataset.confirm || 'Supprimer cet élément ?',
         text: form.dataset.confirmText || 'Cette action est définitive.',
-        icon: 'warning',
-        showCancelButton: true,
-        reverseButtons: true,
-        focusCancel: true,
-        confirmButtonText: form.dataset.confirmButton || 'Oui, supprimer',
-        cancelButtonText: 'Annuler',
-        customClass: { popup: 'sa-swal', confirmButton: 'btn btn-danger', cancelButton: 'btn btn-light border me-2' },
-        buttonsStyling: false
+        confirmText: bouton,
+        cancelText: 'Annuler',
+        // a red button for what removes or closes something, the brand colour otherwise (réactiver...)
+        danger: !/réactiver|reactiver|publier|afficher/i.test(bouton),
+        // the icon says what happens
+        glyph: /réactiver|reactiver/i.test(bouton) ? 'unlock'
+            : /désactiver|desactiver/i.test(bouton) ? 'lock'
+            : /déconnecter|deconnecter/i.test(bouton) ? 'logout'
+            : /supprimer|retirer|annuler/i.test(bouton) ? 'danger' : null
     }).then(function (result) {
         if (result.isConfirmed) form.submit();
     });

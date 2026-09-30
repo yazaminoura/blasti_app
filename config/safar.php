@@ -9,9 +9,9 @@ return [
     // Colors offered on the Apparence page. All of them keep white text readable (contrast >= 4.5:1).
     // The first three come from the BLASTI logo (its bright orange #F2690D is darkened for readable buttons).
     'palette' => [
-        '#0B4FC4' => 'Bleu Blasti',
-        '#0A1F5C' => 'Marine Blasti',
-        '#C24E05' => 'Orange Blasti',
+        '#0B4FC4' => 'Bleu du logo',
+        '#0A1F5C' => 'Marine du logo',
+        '#C24E05' => 'Orange du logo',
         '#0F766E' => 'Pétrole',
         '#2563EB' => 'Bleu azur',
         '#4F46E5' => 'Indigo',
@@ -48,6 +48,10 @@ return [
     'max_non_payes' => (int) env('SAFAR_MAX_NON_PAYES', 4),
     // orders booked without paying (at boarding or at the agency) per calendar month; then card only (0 = no limit)
     'non_payes_par_mois' => (int) env('SAFAR_NON_PAYES_PAR_MOIS', 2),
+    // price by how far away the departure is, set in Admin > Paramètres > Tarifs selon la date (App\Support\Tarif)
+    'majorations' => [],
+    // a seller can correct their own counter sale (seat, mode, remove, cancel) for this long; later: refund right only
+    'guichet_correction_minutes' => (int) env('SAFAR_GUICHET_CORRECTION_MINUTES', 30),
     'absences_max' => (int) env('SAFAR_ABSENCES_MAX', 2),
 
     // Return trip booked after an outbound order (same client, other way): % off the return (0 = no discount)
@@ -75,8 +79,9 @@ return [
      * A cancellation by the company (admin) is always refunded 100 %.
      */
     'annulation' => [
-        // hours before boarding => % refunded
-        'paliers' => [72 => 100, 48 => 80, 24 => 60, 0 => 50],
+        // days before the departure DAY (calendar) => % refunded:
+        // 2 days or more: everything back · the day before: 90 % (10 % kept) · the departure day: 50 %
+        'paliers' => [2 => 100, 1 => 90, 0 => 50],
     ],
 
     // Legal notice (pages Mentions légales / CGV / Confidentialité): the company's official identifiers

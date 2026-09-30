@@ -4,8 +4,9 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        @include('partials.favicon')
 
-        <title>{{ isset($title) ? $title . ' | ' : '' }}{{ __('BLASTI : billets de bus au Maroc') }}</title>
+        <title>{{ isset($title) ? $title . ' | ' : '' }}{{ __(':brand : billets de bus au Maroc', ['brand' => config('safar.nom')]) }}</title>
 
         @include('layouts.head')
         <!-- Fonts -->
@@ -18,7 +19,6 @@
 
     </head>
     <body >
-            {{-- @include('layouts.navigation') --}}
             @include('layouts.navbar')
 
 

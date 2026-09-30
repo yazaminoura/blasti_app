@@ -77,12 +77,16 @@
                             <td class="text-end d-print-none text-nowrap">
                                 @if ($canUpdate && $b->statut !== \App\Models\Reservation::EN_ATTENTE && ! $b->isBoarded())
                                     @if ($reste > 0)
-                                        <form action="{{ route('reservation.admin.payer', $b) }}" method="POST" class="d-inline">
+                                        <form action="{{ route('reservation.admin.payer', $b) }}" method="POST" class="d-inline"
+                                              data-bl-confirm="Encaisser {{ number_format($reste, 2, ',', ' ') }} DH ?" data-bl-confirm-text="Siège {{ $b->num_siege }} · {{ $b->passager() }}. Le montant est ajouté à votre caisse."
+                                              data-bl-confirm-button="Oui, encaisser" data-bl-glyph="cash">
                                             @csrf @method('PATCH')
                                             <button class="btn btn-sm btn-soft" title="Encaisser"><i class="bi bi-cash-coin"></i> Encaisser</button>
                                         </form>
                                     @else
-                                        <form action="{{ route('reservation.admin.embarquer', $b) }}" method="POST" class="d-inline">
+                                        <form action="{{ route('reservation.admin.embarquer', $b) }}" method="POST" class="d-inline"
+                                              data-bl-confirm="Faire monter {{ $b->passager() }} ?" data-bl-confirm-text="Siège {{ $b->num_siege }}. Le voyageur est noté à bord du bus."
+                                              data-bl-confirm-button="Oui, à bord" data-bl-glyph="board">
                                             @csrf @method('PATCH')
                                             <button class="btn btn-sm btn-primary" title="Faire monter"><i class="bi bi-box-arrow-in-right"></i> Embarquer</button>
                                         </form>

@@ -38,7 +38,7 @@
                                     </div>
                                     <div class="d-flex align-items-center justify-content-between border-top pt-3">
                                         <h6 class="text-primary">
-                                            <span class="fs-14 fw-normal text-default">{{ __('prix') }} </span>{{ $voyage->prix }} DH
+                                            <span class="fs-14 fw-normal text-default">{{ __('prix') }} </span>{{ number_format($voyage->prixActuel(), 2, ',', ' ') }} DH
                                         </h6>
                                         <a href="{{ route('client.reservations.show', $voyage->id) }}" class="btn btn-primary btn-sm">{{ __('Réserver') }}</a>
                                     </div>

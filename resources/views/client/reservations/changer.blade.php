@@ -165,10 +165,15 @@
                 document.getElementById('change-form').addEventListener('submit', function (e) {
                     if (!inputs.some(i => i.checked)) {
                         e.preventDefault();
-                        alert(@json(__('Veuillez choisir un siège.')));
+                        BlastiAlert.fire({ type: 'warning', title: @json(__('Veuillez choisir un siège.')) });
                         return;
                     }
-                    if (!confirm(document.getElementById('change-confirm').dataset.confirm)) e.preventDefault();
+                    // same popup as the rest of the site (assets/js/blasti-alert.js)
+                    if (this.dataset.blOk) return;
+                    e.preventDefault();
+                    const form = this;
+                    BlastiAlert.confirm(@json(__('Changer de départ ?')), document.getElementById('change-confirm').dataset.confirm, { confirmText: @json(__('Oui, changer')) })
+                        .then((oui) => { if (oui) { form.dataset.blOk = '1'; form.submit(); } });
                 });
             })();
         </script>

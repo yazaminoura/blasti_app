@@ -22,9 +22,8 @@
                 <div class="row align-items-center">
                     <div class="col-lg-10 col-md-12 mx-auto wow fadeInUp" data-wow-delay="0.3s">
                         <div class="banner-content text-center mx-auto">
-                            <h1 class="text-white display-4 mb-2">{!! __('Découvrez de nouveaux horizons, un :icon trajet à la fois avec Blasti !', ['icon' => '<span class="flight-icon"><img src="'.\App\Support\BrandImages::url('blasti-hero-bus.png').'" class="blasti-hero-bus" style="height: 66px; width: auto; vertical-align: middle;" alt="icon"></span>']) !!}</h1>
+                            <h1 class="text-white display-4 mb-2">{!! __('Découvrez de nouveaux horizons, un :icon trajet à la fois avec :brand !', ['brand' => e(config('safar.nom')), 'icon' => '<span class="flight-icon"><img src="'.\App\Support\BrandImages::url('blasti-hero-bus.png').'" class="blasti-hero-bus" style="height: 66px; width: auto; vertical-align: middle;" alt="icon"></span>']) !!}</h1>
                             <p class="text-white mx-auto">{{ __('Votre plateforme idéale pour organiser et vivre des voyages inoubliables.') }}</p>
-                            {{-- <a class="video-btn video-effect" data-fancybox="" href="https://youtu.be/NSAOrGb9orM"><i class="isax isax-play5"></i></a> --}}
                         </div>
                     </div>
                 </div>
@@ -37,35 +36,6 @@
     <section class="banner-search-four">
         <div class="container">
             <div class="banner-form card mb-0">
-                {{-- <div class="card-header">
-                <ul class="nav">
-                    <li>
-                        <a href="javascript:void(0);" class="nav-link active" data-bs-toggle="tab" data-bs-target="#flight">
-                            <i class="isax isax-airplane5 me-2"></i>Flights
-                        </a>
-                    </li>
-                    <li>
-                        <a href="javascript:void(0);" class="nav-link" data-bs-toggle="tab" data-bs-target="#Hotels">
-                            <i class="isax isax-buildings5 me-2"></i>Hotels
-                        </a>
-                    </li>
-                    <li>
-                        <a href="javascript:void(0);" class="nav-link" data-bs-toggle="tab" data-bs-target="#Cars">
-                            <i class="isax isax-car5 me-2"></i>Cars
-                        </a>
-                    </li>
-                    <li>
-                        <a href="javascript:void(0);" class="nav-link" data-bs-toggle="tab" data-bs-target="#Cruise">
-                            <i class="isax isax-ship5 me-2"></i>Cruise
-                        </a>
-                    </li>
-                    <li>
-                        <a href="javascript:void(0);" class="nav-link" data-bs-toggle="tab" data-bs-target="#Tour">
-                            <i class="isax isax-camera5 me-2"></i>Tour
-                        </a>
-                    </li>
-                </ul>
-            </div> --}}
                 <div class="card-body">
                     <div>
                         <div class="tab-content">
@@ -276,13 +246,13 @@
 </section>
 <!-- /Place Section -->
 
-    <!-- Why BLASTI -->
+    <!-- Why us -->
     <section class="section mz-why">
         <div class="container">
             <div class="row align-items-center g-5">
                 <div class="col-lg-5">
                     <div class="section-header section-header-four mb-4">
-                        <h2 class="mb-2">{!! __('Pourquoi <span>BLASTI</span> ?') !!}</h2>
+                        <h2 class="mb-2">{!! __('Pourquoi <span>:brand</span> ?', ['brand' => e(config('safar.nom'))]) !!}</h2>
                         <p class="sub-title">{{ __('Les compagnies de bus du Maroc réunies sur un seul site, avec des prix clairs et une réservation en ligne.') }}</p>
                     </div>
                     <div class="mz-numbers">
@@ -323,7 +293,7 @@
             </div>
         </div>
     </section>
-    <!-- /Why BLASTI -->
+    <!-- /Why us -->
     <!-- Client Section -->
     @php
         // partner companies with their next departures (real numbers, same as the Compagnies page)

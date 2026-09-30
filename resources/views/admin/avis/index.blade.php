@@ -57,7 +57,10 @@
                             <td class="text-end text-nowrap">
                                 <x-admin.row-actions :delete="$canDelete ? route('avis.destroy', $a) : null" confirm="Supprimer cet avis ?">
                                     @if ($canUpdate)
-                                        <form action="{{ route('avis.publier', $a) }}" method="POST" class="d-inline">
+                                        <form action="{{ route('avis.publier', $a) }}" method="POST" class="d-inline"
+                                              data-bl-confirm="{{ $a->publie ? 'Masquer cet avis ?' : 'Afficher cet avis ?' }}"
+                                              data-bl-confirm-text="{{ $a->publie ? 'Il ne sera plus visible sur le site et ne comptera plus dans la note de la compagnie.' : 'Il sera visible sur le site et comptera dans la note de la compagnie.' }}"
+                                              data-bl-confirm-button="{{ $a->publie ? 'Oui, masquer' : 'Oui, afficher' }}" data-bl-glyph="{{ $a->publie ? 'eyeoff' : 'eye' }}">
                                             @csrf @method('PATCH')
                                             <button class="sa-icon-btn" title="{{ $a->publie ? 'Masquer' : 'Afficher' }}"><i class="bi {{ $a->publie ? 'bi-eye-slash' : 'bi-eye' }}"></i></button>
                                         </form>

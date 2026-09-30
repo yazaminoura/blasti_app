@@ -43,6 +43,25 @@ class BrandImages
         foreach (self::FILES as $file) {
             self::recolored($file, $color);
         }
+        self::favicon();
+    }
+
+    /**
+     * public/favicon.ico = the current bus icon (asked by the browser for pages without an icon, e.g. a PDF in a tab).
+     * An .ico may hold a PNG as it is: 6-byte header + 16-byte entry + the PNG.
+     */
+    public static function favicon(): void
+    {
+        $png = @file_get_contents(self::path('blasti-icon.png'));
+        $taille = $png ? @getimagesizefromstring($png) : false;
+        if (! $png || ! $taille) {
+            return;
+        }
+        $cote = fn (int $px) => $px >= 256 ? 0 : $px; // 0 means 256 in an .ico
+        $ico = pack('vvv', 0, 1, 1)
+            . pack('CCCCvvVV', $cote($taille[0]), $cote($taille[1]), 0, 0, 1, 32, strlen($png), 22)
+            . $png;
+        @file_put_contents(public_path('favicon.ico'), $ico);
     }
 
     private static function relative(string $file): string

@@ -269,23 +269,28 @@ class Reservation extends Model
             return ['pourcentage' => 0, 'montant' => 0.0, 'frais' => 0.0];
         }
 
-        $percent = $by === 'client' ? self::refundPercent(($at ?? now())->diffInMinutes($this->departAt(), false) / 60) : 100;
+        $at ??= now();
+        $percent = match (true) {
+            $by !== 'client' => 100,                  // cancelled by the company / the team: everything back
+            $this->departAt()->lte($at) => 0,         // the bus has left
+            default => self::refundPercent((int) $at->copy()->startOfDay()->diffInDays($this->departAt()->copy()->startOfDay())),
+        };
         // refunds are based on what was really paid (a supplement still due is not refunded)
         $amount = round($this->montantPaye() * $percent / 100, 2);
 
         return ['pourcentage' => $percent, 'montant' => $amount, 'frais' => round($this->montantPaye() - $amount, 2)];
     }
 
-    /** % refunded for a cancellation $hours before boarding (0 once the bus has left). */
-    public static function refundPercent(float $hours): int
+    /** % refunded for a cancellation $days calendar days before the departure day (0 = on the departure day). */
+    public static function refundPercent(int $days): int
     {
-        if ($hours <= 0) {
+        if ($days < 0) {
             return 0;
         }
         $steps = config('safar.annulation.paliers', [0 => 100]);
         krsort($steps);
-        foreach ($steps as $minHours => $percent) {
-            if ($hours >= $minHours) {
+        foreach ($steps as $minDays => $percent) {
+            if ($days >= $minDays) {
                 return (int) $percent;
             }
         }

@@ -167,6 +167,8 @@ Route::middleware('auth')->group(function () {
         Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
         // super admin: log a team account out of every browser
         Route::post('/admin/users/{user}/deconnecter', [UserController::class, 'deconnecter'])->name('admin.users.deconnecter');
+        // super admin: close a team account (never deleted: its history keeps its name) or open it again
+        Route::patch('/admin/users/{user}/desactiver', [UserController::class, 'desactiver'])->name('admin.users.desactiver');
 
         Route::get('/admin/roles/create', [RoleController::class, 'create'])->name('admin.roles.create');
         Route::post('/admin/roles', [RoleController::class, 'store'])->name('admin.roles.store');
@@ -206,6 +208,11 @@ Route::middleware('auth')->group(function () {
         Route::get('/admin/guichet/vente/{commande}/imprimer', [\App\Http\Controllers\Admin\GuichetController::class, 'imprimer'])->name('reservation.admin.guichet.imprimer');
         // fix the passenger name typed at the counter (typo)
         Route::patch('/admin/guichet/billet/{reservation}/passager', [\App\Http\Controllers\Admin\GuichetController::class, 'passager'])->name('reservation.admin.guichet.passager');
+        // seller's mistakes, shortly after the sale (GuichetController::peutCorriger): seat, payment mode, remove, cancel all
+        Route::patch('/admin/guichet/billet/{reservation}/siege', [\App\Http\Controllers\Admin\GuichetController::class, 'siege'])->name('reservation.admin.guichet.siege');
+        Route::delete('/admin/guichet/billet/{reservation}', [\App\Http\Controllers\Admin\GuichetController::class, 'retirer'])->name('reservation.admin.guichet.retirer');
+        Route::patch('/admin/guichet/vente/{commande}/mode', [\App\Http\Controllers\Admin\GuichetController::class, 'mode'])->name('reservation.admin.guichet.mode');
+        Route::delete('/admin/guichet/vente/{commande}', [\App\Http\Controllers\Admin\GuichetController::class, 'annuler'])->name('reservation.admin.guichet.annuler');
         Route::get('/reservation/admin/scanner', [ReservationController::class, 'scanner'])->name('reservation.admin.scanner');
         // one ticket checked from the scanner page (JSON): logged in the scans table
         Route::post('/reservation/admin/scanner', [ReservationController::class, 'scan'])->middleware('throttle:120,1')->name('reservation.admin.scan');
@@ -224,6 +231,9 @@ Route::middleware('auth')->group(function () {
         // Logo color and name (super admin only, see AdminPermission)
         Route::get('/admin/apparence', [ApparenceController::class, 'edit'])->name('admin.apparence.edit');
         Route::put('/admin/apparence', [ApparenceController::class, 'update'])->name('admin.apparence.update');
+        // prices by how far away the departure is (super admin only, see AdminPermission)
+        Route::get('/admin/tarifs', [\App\Http\Controllers\Admin\TarifsController::class, 'edit'])->name('admin.tarifs.edit');
+        Route::put('/admin/tarifs', [\App\Http\Controllers\Admin\TarifsController::class, 'update'])->name('admin.tarifs.update');
         // public contact details + social links (super admin only, see AdminPermission)
         Route::get('/admin/coordonnees', [\App\Http\Controllers\Admin\CoordonneesController::class, 'edit'])->name('admin.coordonnees.edit');
         Route::put('/admin/coordonnees', [\App\Http\Controllers\Admin\CoordonneesController::class, 'update'])->name('admin.coordonnees.update');

@@ -84,7 +84,7 @@
                         <div class="d-sm-flex align-items-center justify-content-center justify-content-between">
                             <div class="d-flex align-items-center justify-content-center justify-content-sm-start me-3 mt-2">
                                 <span class="avatar avatar-lg bg-light rounded-circle flex-shrink-0">
-                                    <i class="ti ti-headphones-filled fs-24 text-gray-9"></i>
+                                    <i class="fa-solid fa-headset fs-24 text-gray-9"></i>
                                 </span>
                                 <div class="ms-2">
                                     <p class="fs-14 mb-1">{{ __('Service client') }}</p>
@@ -93,7 +93,7 @@
                             </div>
                             <div class="d-flex align-items-center justify-content-center justify-content-sm-start mt-2">
                                 <span class="avatar avatar-lg bg-light rounded-circle flex-shrink-0">
-                                    <i class="ti ti-message-2 fs-24 text-gray-9"></i>
+                                    <i class="fa-regular fa-message fs-24 text-gray-9"></i>
                                 </span>
                                 <div class="ms-2">
                                     <p class="fs-14 mb-1">{{ __('Écrivez-nous') }}</p>
@@ -112,7 +112,7 @@
             <div class="row">
                 <div class="col-md-12">
                     <div class="d-flex align-items-center justify-content-between flex-wrap">
-                        <p>{{ __('Tous droits réservés') }}, <a href="{{ route('home') }}" class="text-primary fw-medium">BLASTI</a> {{ date('Y') }}</p>
+                        <p>{{ __('Tous droits réservés') }}, <a href="{{ route('home') }}" class="text-primary fw-medium">{{ config('safar.nom') }}</a> {{ date('Y') }}</p>
                         @php $social = array_filter(config('safar.social', [])); @endphp
                         @if ($social)
                             <div class="d-flex align-items-center">

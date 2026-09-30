@@ -46,7 +46,12 @@ class AdminPermission
         'reservation.admin.guichet.pdf'     => 'reservations.read',
         'reservation.admin.guichet.imprimer' => 'reservations.read',
         'reservation.admin.guichet.passager' => 'reservations.update',
+        'reservation.admin.guichet.siege'    => 'reservations.update',
+        'reservation.admin.guichet.retirer'  => 'reservations.update',
+        'reservation.admin.guichet.mode'     => 'reservations.update',
+        'reservation.admin.guichet.annuler'  => 'reservations.update',
         'admin.users.deconnecter'      => 'utilisateurs.update', // + super admin only (UserController::deconnecter)
+        'admin.users.desactiver'       => 'utilisateurs.update', // + super admin only (UserController::desactiver)
         'reservation.admin.scanner'    => 'scanner.use',
         'reservation.admin.scan'       => 'scanner.use',
         'reservation.admin.embarquer'  => 'scanner.use',
@@ -93,7 +98,7 @@ class AdminPermission
         }
 
         // Logo color and name of the whole site
-        if ((str_starts_with($routeName, 'admin.apparence.') || str_starts_with($routeName, 'admin.coordonnees.')) && ! $user->isSuperAdmin()) {
+        if ((str_starts_with($routeName, 'admin.apparence.') || str_starts_with($routeName, 'admin.coordonnees.') || str_starts_with($routeName, 'admin.tarifs.')) && ! $user->isSuperAdmin()) {
             abort(403, "Seul le super administrateur peut modifier l'apparence.");
         }
 

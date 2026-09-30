@@ -52,7 +52,7 @@
                                             <h5 class="fw-bold mb-2">{{ $item->voyage->autocar->societe->raison_social }}</h5>
                                             <p class="text-muted small mb-2"><i class="isax isax-location me-1"></i>{{ __($item->voyage->villeDepart->ville) }} → {{ __($item->voyage->villeArrivee->ville) }}</p>
                                             <div class="d-flex justify-content-between align-items-center mt-3">
-                                                <h6 class="text-primary fw-bold mb-0">{{ number_format($item->voyage->prix, 2) }} {{ __('DH') }}</h6>
+                                                <h6 class="text-primary fw-bold mb-0">{{ number_format($item->voyage->prixActuel(), 2, ',', ' ') }} {{ __('DH') }}</h6>
                                                 <a href="{{ route('voyage.detail', ['id' => $item->voyage->id]) }}" class="btn btn-outline-primary btn-sm rounded-pill">{{ __('Détails') }}</a>
                                             </div>
                                         </div>

@@ -160,7 +160,7 @@
 
                     {{-- Delete account (refused while bookings exist, see ProfileController::destroy) --}}
                     <div class="mz-danger-zone mt-4">
-                        <form method="POST" action="{{ route('profile.destroy') }}" onsubmit="return confirm(@json(__('Supprimer définitivement votre compte ?')));">
+                        <form method="POST" action="{{ route('profile.destroy') }}" data-bl-confirm="{{ __('Supprimer définitivement votre compte ?') }}" data-bl-confirm-text="{{ __('Vos informations sont effacées. Cette action est définitive.') }}" data-bl-confirm-button="{{ __('Oui, supprimer') }}" data-bl-danger>
                             @csrf
                             @method('DELETE')
                             <h6 class="text-danger mb-1"><i class="isax isax-warning-2 me-1"></i> {{ __('Supprimer mon compte') }}</h6>

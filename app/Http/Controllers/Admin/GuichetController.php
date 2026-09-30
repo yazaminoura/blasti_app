@@ -39,28 +39,49 @@ class GuichetController extends Controller
 
         // departures from that day on, the next ones first (company accounts only see theirs: global scope)
         $debut = \Carbon\Carbon::parse($date)->startOfDay();
-        $departs = Voyage::serving($de, $a)
+        $departs = ($de ? Voyage::serving($de, $a) : Voyage::query())
             ->whereDate('date_depart', '>=', $debut->copy()->subDay()->toDateString()) // a later stop can be the next day
             ->whereDate('date_depart', '<=', $debut->copy()->addDays(self::JOURS)->toDateString())
             ->with(['villeDepart', 'villeArrivee', 'autocar.societe', 'arrets.ville', 'reservations:id,voyage_id,num_siege,arret_depart_id,arret_arrivee_id'])
             ->get()
-            ->map(function (Voyage $v) use ($de, $a) {
-                $segment = $v->segmentFor($de, $a);
-
-                return $segment ? (object) [
-                    'voyage' => $v, 'depart' => $segment[0], 'arrivee' => $segment[1],
-                    'prix' => $v->segmentPrice(...$segment), 'libres' => $v->seatsLeft(...$segment),
-                ] : null;
-            })->filter()
-            // boarding at the counter's city from the chosen day on, closest departure first
+            // every part of every trip is sold on its own: Tanger → Tetouan via Oujda also gives
+            // Tanger → Oujda and Oujda → Tetouan (same bus, same controller, their own price)
+            ->flatMap(fn (Voyage $v) => $this->segments($v, $de, $a))
+            // boarding from the chosen day on, closest departure first
             ->filter(fn ($d) => $d->depart->passage_at->gte($debut) && $d->depart->passage_at->isFuture())
-            ->sortBy(fn ($d) => $d->depart->passage_at->getTimestamp())
+            ->sortBy(fn ($d) => [$d->depart->passage_at->getTimestamp(), $d->arrivee->ordre])
             ->take(self::MAX_DEPARTS)->values();
 
-        $choix = $request->filled('voyage') ? $departs->first(fn ($d) => $d->voyage->id === $request->integer('voyage')) : null;
+        $choix = $request->filled('voyage') ? $departs->first(fn ($d) => $d->voyage->id === $request->integer('voyage')
+            && (! $request->filled('ad') || $d->depart->id === $request->integer('ad'))
+            && (! $request->filled('aa') || $d->arrivee->id === $request->integer('aa'))) : null;
         $pris = $choix ? $choix->voyage->seatsTaken($choix->depart, $choix->arrivee) : [];
 
         return view('admin.guichet.index', compact('villes', 'date', 'de', 'a', 'departs', 'choix', 'pris'));
+    }
+
+    /** The sellable parts of a trip: boarding in $de (any stop if null), getting off in $a (any later stop if null). */
+    private function segments(Voyage $v, ?int $de, ?int $a)
+    {
+        $arrets = $v->arrets->values();
+        $lignes = collect();
+        foreach ($arrets as $i => $montee) {
+            if ($de && (int) $montee->ville_id !== $de) {
+                continue;
+            }
+            foreach ($arrets->slice($i + 1) as $descente) {
+                if ($a && (int) $descente->ville_id !== $a) {
+                    continue;
+                }
+                $lignes->push((object) [
+                    'voyage' => $v, 'depart' => $montee, 'arrivee' => $descente,
+                    'complet' => $montee->ordre === $arrets->first()->ordre && $descente->ordre === $arrets->last()->ordre,
+                    'prix' => $v->segmentPrice($montee, $descente), 'libres' => $v->seatsLeft($montee, $descente),
+                ]);
+            }
+        }
+
+        return $lignes;
     }
 
     public function store(Request $request)
@@ -151,21 +172,131 @@ class GuichetController extends Controller
     public function vente(string $commande)
     {
         $billets = $this->billets($commande);
+        $actifs = $billets->reject->isCancelled();
+
+        // free seats each ticket can move to (same bus, same segment; its own seat included)
+        $libres = [];
+        foreach ($actifs as $b) {
+            if ($b->voyage && $b->arretDepart && $b->arretArrivee) {
+                $pris = $b->voyage->seatsTaken($b->arretDepart, $b->arretArrivee, $b->id);
+                $libres[$b->id] = array_values(array_diff(range(1, (int) ($b->voyage->autocar?->nbr_siege ?? 0)), $pris));
+            }
+        }
 
         return view('admin.guichet.vente', [
             'billets' => $billets,
+            'actifs' => $actifs,
             'commande' => $commande,
             'client' => $billets->first()->user,
-            'whatsapp' => \App\Support\WhatsApp::lien($billets, $billets->first()->user?->telephone),
-            'texte' => \App\Support\WhatsApp::texte($billets),
+            'whatsapp' => \App\Support\WhatsApp::lien($actifs, $billets->first()->user?->telephone),
+            'texte' => \App\Support\WhatsApp::texte($actifs),
+            'libres' => $libres,
+            'corrigeable' => $actifs->filter(fn ($b) => self::peutCorriger($b, request()->user()))->pluck('id')->all(),
+            'correctionJusqua' => $actifs->min('created_at')?->copy()->addMinutes((int) config('safar.guichet_correction_minutes')),
         ]);
+    }
+
+    /**
+     * A seller may correct their own sale for config('safar.guichet_correction_minutes') after it, before departure and boarding.
+     * Later (or someone else's sale): only the super admin or a role with the refund right (Service client, Directeur).
+     */
+    public static function peutCorriger(Reservation $b, User $user): bool
+    {
+        if ($b->isCancelled() || $b->isBoarded() || $b->departAt()->isPast() || ! $b->vendu_par) {
+            return false;
+        }
+        if ($user->isSuperAdmin() || $user->hasPermission('reservations.rembourser')) {
+            return true;
+        }
+
+        return $b->vendu_par === $user->id
+            && $b->created_at->gt(now()->subMinutes((int) config('safar.guichet_correction_minutes')));
+    }
+
+    /** Wrong seat: the ticket moves to a free seat of the same bus (same ticket, same QR code). */
+    public function siege(Request $request, Reservation $reservation)
+    {
+        abort_unless(self::peutCorriger($reservation, $request->user()), 403, 'Le délai de correction de cette vente est passé.');
+        $num = (int) $request->validate(['num_siege' => ['required', 'integer', 'min:1']])['num_siege'];
+        $avant = $reservation->num_siege;
+
+        try {
+            DB::transaction(function () use ($reservation, $num) {
+                $voyage = Voyage::with(['autocar', 'arrets'])->lockForUpdate()->findOrFail($reservation->voyage_id);
+                $depart = $voyage->arrets->firstWhere('id', $reservation->arret_depart_id);
+                $arrivee = $voyage->arrets->firstWhere('id', $reservation->arret_arrivee_id);
+                if ($num > (int) $voyage->autocar?->nbr_siege) {
+                    throw new \DomainException('Ce siège n\'existe pas dans ce bus.');
+                }
+                if (in_array($num, $voyage->seatsTaken($depart, $arrivee, $reservation->id), true)) {
+                    throw new \DomainException("Le siège {$num} vient d'être vendu : choisissez-en un autre.");
+                }
+                $reservation->update(['num_siege' => $num, 'siege_actif' => $num]);
+            });
+        } catch (\DomainException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "Billet #{$reservation->id} : siège {$avant} → siège {$num}. Réimprimez ou renvoyez le billet.");
+    }
+
+    /** Wrong payment mode typed (cash / card): the cash drawer lines of the sale are corrected. */
+    public function mode(Request $request, string $commande)
+    {
+        $mode = $request->validate(['mode' => ['required', 'in:' . implode(',', array_keys(Encaissement::MODES))]])['mode'];
+        $billets = $this->billets($commande)->filter(fn ($b) => self::peutCorriger($b, $request->user()));
+        abort_if($billets->isEmpty(), 403, 'Le délai de correction de cette vente est passé.');
+
+        foreach ($billets as $b) {
+            $b->encaissements()->where('montant', '>', 0)->update(['mode' => $mode]);
+            $b->forceFill(['paiement_ref' => $mode === 'carte' ? 'guichet-carte' : 'guichet'])->save();
+        }
+
+        return back()->with('success', 'Mode de paiement corrigé : ' . Encaissement::MODES[$mode] . '.');
+    }
+
+    /** One ticket too many (or the whole sale, wrong bus / date): cancelled, money given back, seat free again. */
+    public function retirer(Request $request, Reservation $reservation)
+    {
+        abort_unless(self::peutCorriger($reservation, $request->user()), 403, 'Le délai de correction de cette vente est passé.');
+        $rendu = $this->rendre($reservation, $request->user());
+
+        return back()->with('success', "Billet #{$reservation->id} (siège {$reservation->num_siege}) retiré : rendez " . number_format($rendu, 2, ',', ' ') . ' DH au voyageur.');
+    }
+
+    public function annuler(Request $request, string $commande)
+    {
+        $billets = $this->billets($commande)->filter(fn ($b) => self::peutCorriger($b, $request->user()));
+        abort_if($billets->isEmpty(), 403, 'Le délai de correction de cette vente est passé.');
+        $rendu = $billets->sum(fn ($b) => $this->rendre($b, $request->user()));
+
+        return redirect()->route('reservation.admin.guichet')
+            ->with('success', "Vente {$commande} annulée : rendez " . number_format($rendu, 2, ',', ' ') . ' DH au voyageur, puis refaites la vente.');
+    }
+
+    /**
+     * Cancels a counter ticket and gives the money back at once: a negative line in the cash drawer
+     * (same mode as the payment), so the seller's drawer stays right. No e-mail: the traveller is at the counter.
+     */
+    private function rendre(Reservation $b, User $par): float
+    {
+        return DB::transaction(function () use ($b, $par) {
+            $paye = (float) $b->encaissements()->sum('montant');
+            $mode = $b->encaissements()->where('montant', '>', 0)->value('mode') ?? 'especes';
+            $b->cancel('admin');
+            if ($paye > 0) {
+                $b->encaissements()->create(['user_id' => $par->id, 'montant' => -$paye, 'mode' => $mode]);
+            }
+            $b->forceFill(['montant_rembourse' => $paye, 'rembourse_le' => now()])->save();
+
+            return $paye;
+        });
     }
 
     /** Every ticket of the sale in one PDF (one page + QR code per seat). */
     public function pdf(string $commande)
     {
-        return Pdf::loadView('client.reservations.ticket-pdf', ['reservations' => $this->billets($commande)])
-            ->setPaper('a5', 'landscape')
+        return \App\Support\BilletPdf::make($this->billets($commande))
             ->stream('billets-' . $commande . '.pdf');
     }
 
@@ -195,7 +326,7 @@ class GuichetController extends Controller
     private function billets(string $commande)
     {
         $billets = Reservation::withoutGlobalScope('active')->where('commande', $commande)
-            ->with(['user', 'villeDepart', 'villeArrivee', 'modeReglement', 'autocar.societe', 'encaissements.user'])
+            ->with(['user', 'villeDepart', 'villeArrivee', 'modeReglement', 'autocar.societe', 'encaissements.user', 'voyage.autocar', 'voyage.arrets', 'arretDepart', 'arretArrivee'])
             ->orderBy('num_siege')->get();
         abort_if($billets->isEmpty(), 404);
 

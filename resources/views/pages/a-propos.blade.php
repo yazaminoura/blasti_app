@@ -12,7 +12,10 @@
                         <h2 class="mb-3">{!! __('Voyager en bus au Maroc, <span>simplement</span>') !!}</h2>
                     </div>
                     <p class="text-muted">{{ __(':nom réunit les compagnies de bus du Maroc sur un seul site. Vous comparez les départs, vous choisissez votre siège sur le plan de l\'autocar et vous recevez votre billet tout de suite, sans passer au guichet.', ['nom' => config('safar.nom')]) }}</p>
-                    <p class="text-muted mb-0">{{ __('Notre nom vient de la darija « blasti », « ma place » : chaque billet correspond à un siège réservé pour vous.') }}</p>
+                    @if (mb_strtolower(config('safar.nom')) === 'blasti')
+                        {{-- the meaning of the name: only while the site keeps this name (Admin > Apparence) --}}
+                        <p class="text-muted mb-0">{{ __('Notre nom vient de la darija « blasti », « ma place » : chaque billet correspond à un siège réservé pour vous.') }}</p>
+                    @endif
                 </div>
                 <div class="col-lg-6">
                     <div class="mz-numbers">

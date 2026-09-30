@@ -237,79 +237,6 @@
                                             </div>
                                         </div>
 
-                                        {{-- <div class="accordion-item border-bottom p-3">
-                                        <div class="accordion-header">
-                                            <div class="accordion-button p-0" data-bs-toggle="collapse"
-                                                data-bs-target="#accordion-brand" aria-expanded="true"
-                                                aria-controls="accordion-brand" role="button">
-                                                <i class="isax isax-discount-shape me-2 text-primary"></i>Reviews
-                                            </div>
-                                        </div>
-                                        <div id="accordion-brand" class="accordion-collapse collapse show">
-                                            <div class="accordion-body">
-                                                <div class="form-check d-flex align-items-center ps-0 mb-2">
-                                                    <input class="form-check-input ms-0 mt-0" name="review1"
-                                                        type="checkbox" id="review1">
-                                                    <label class="form-check-label ms-2" for="review1">
-                                                        <span class="rating d-flex align-items-center">
-                                                            <i class="fas fa-star filled text-primary me-1"></i>
-                                                            <i class="fas fa-star filled text-primary me-1"></i>
-                                                            <i class="fas fa-star filled text-primary me-1"></i>
-                                                            <i class="fas fa-star filled text-primary me-1"></i>
-                                                            <i class="fas fa-star filled text-primary"></i>
-                                                            <span class="ms-2">5 Star</span>
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                                <div class="form-check d-flex align-items-center ps-0 mb-2">
-                                                    <input class="form-check-input ms-0 mt-0" name="review2"
-                                                        type="checkbox" id="review2">
-                                                    <label class="form-check-label ms-2" for="review2">
-                                                        <span class="rating d-flex align-items-center">
-                                                            <i class="fas fa-star filled text-primary me-1"></i>
-                                                            <i class="fas fa-star filled text-primary me-1"></i>
-                                                            <i class="fas fa-star filled text-primary me-1"></i>
-                                                            <i class="fas fa-star filled text-primary"></i>
-                                                            <span class="ms-2">4 Star</span>
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                                <div class="form-check d-flex align-items-center ps-0 mb-2">
-                                                    <input class="form-check-input ms-0 mt-0" name="review3"
-                                                        type="checkbox" id="review3">
-                                                    <label class="form-check-label ms-2" for="review3">
-                                                        <span class="rating d-flex align-items-center">
-                                                            <i class="fas fa-star filled text-primary me-1"></i>
-                                                            <i class="fas fa-star filled text-primary me-1"></i>
-                                                            <i class="fas fa-star filled text-primary"></i>
-                                                            <span class="ms-2">3 Star</span>
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                                <div class="form-check d-flex align-items-center ps-0 mb-2">
-                                                    <input class="form-check-input ms-0 mt-0" name="review4"
-                                                        type="checkbox" id="review4">
-                                                    <label class="form-check-label ms-2" for="review4">
-                                                        <span class="rating d-flex align-items-center">
-                                                            <i class="fas fa-star filled text-primary me-1"></i>
-                                                            <i class="fas fa-star filled text-primary"></i>
-                                                            <span class="ms-2">2 Star</span>
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                                <div class="form-check d-flex align-items-center ps-0 mb-0">
-                                                    <input class="form-check-input ms-0 mt-0" name="review5"
-                                                        type="checkbox" id="review5">
-                                                    <label class="form-check-label ms-2" for="review5">
-                                                        <span class="rating d-flex align-items-center">
-                                                            <i class="fas fa-star filled text-primary"></i>
-                                                            <span class="ms-2">1 Star</span>
-                                                        </span>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div> --}}
                                     </div>
                             </form>
                         </div>
@@ -388,7 +315,7 @@
                         $('#voyages-pagination').toggle(false);
                     },
                     error: function () {
-                        alert(@json(__('Une erreur est survenue lors de la recherche. Veuillez réessayer.')));
+                        BlastiAlert.fire({ type: 'error', title: @json(__('Une erreur est survenue lors de la recherche. Veuillez réessayer.')) });
                     }
                 });
             }

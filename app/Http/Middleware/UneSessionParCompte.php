@@ -14,7 +14,7 @@ class UneSessionParCompte
     public function handle(Request $request, Closure $next): Response
     {
         $user = $request->user();
-        if (! $user || SessionUnique::valide($user, $request)) {
+        if (! $user || (! $user->desactive_le && SessionUnique::valide($user, $request))) {
             return $next($request);
         }
 
@@ -23,7 +23,9 @@ class UneSessionParCompte
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        $message = 'Votre compte a été ouvert sur un autre appareil : vous avez été déconnecté ici. Un compte de l\'équipe ne peut être ouvert qu\'à un seul endroit à la fois.';
+        $message = $user->desactive_le
+            ? 'Ce compte est désactivé. Contactez l\'administrateur.'
+            : 'Votre compte a été ouvert sur un autre appareil : vous avez été déconnecté ici. Un compte de l\'équipe ne peut être ouvert qu\'à un seul endroit à la fois.';
         if ($request->expectsJson()) {
             return response()->json(['message' => $message], 401);
         }

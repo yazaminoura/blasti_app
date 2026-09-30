@@ -45,11 +45,12 @@
                                                 {{-- cash or card terminal: goes into the staff member's cash drawer (table encaissements) --}}
                                                 <form method="POST" action="{{ route('reservation.admin.payer', $r) }}" class="d-grid gap-2">
                                                     @csrf @method('PATCH')
-                                                    <button name="mode" value="especes" class="btn btn-warning btn-lg w-100"><i class="isax isax-money-recive me-1"></i>{{ __('Encaisser :montant DH en espèces', ['montant' => number_format($aPayer, 2, ',', ' ')]) }}</button>
-                                                    <button name="mode" value="carte" class="btn btn-light btn-lg w-100"><i class="isax isax-card me-1"></i>{{ __('Encaisser :montant DH par carte (TPE)', ['montant' => number_format($aPayer, 2, ',', ' ')]) }}</button>
+                                                    <button name="mode" value="especes" class="btn btn-warning btn-lg w-100" data-bl-confirm="{{ __('Encaisser :montant DH en espèces ?', ['montant' => number_format($aPayer, 2, ',', ' ')]) }}" data-bl-confirm-text="{{ __('Siège :num. Le montant est ajouté à votre caisse et un reçu est envoyé au voyageur.', ['num' => $r->num_siege]) }}" data-bl-confirm-button="{{ __('Oui, encaisser') }}" data-bl-glyph="cash"><i class="isax isax-money-recive me-1"></i>{{ __('Encaisser :montant DH en espèces', ['montant' => number_format($aPayer, 2, ',', ' ')]) }}</button>
+                                                    <button name="mode" value="carte" class="btn btn-light btn-lg w-100" data-bl-confirm="{{ __('Encaisser :montant DH par carte (TPE) ?', ['montant' => number_format($aPayer, 2, ',', ' ')]) }}" data-bl-confirm-text="{{ __('Siège :num. Le montant est ajouté à votre caisse et un reçu est envoyé au voyageur.', ['num' => $r->num_siege]) }}" data-bl-confirm-button="{{ __('Oui, encaisser') }}" data-bl-glyph="cash"><i class="isax isax-card me-1"></i>{{ __('Encaisser :montant DH par carte (TPE)', ['montant' => number_format($aPayer, 2, ',', ' ')]) }}</button>
                                                 </form>
                                             @endif
-                                            <form method="POST" action="{{ route('reservation.admin.embarquer', $r) }}">
+                                            <form method="POST" action="{{ route('reservation.admin.embarquer', $r) }}"
+                                                  data-bl-confirm="{{ __('Faire monter :nom ?', ['nom' => $r->passager()]) }}" data-bl-confirm-text="{{ __('Siège :num. Le voyageur est noté à bord du bus.', ['num' => $r->num_siege]) }}" data-bl-confirm-button="{{ __('Oui, à bord') }}" data-bl-glyph="board">
                                                 @csrf @method('PATCH')
                                                 <button class="btn btn-success btn-lg w-100" @disabled($aPayer > 0)><i class="isax isax-login me-1"></i>{{ __('Faire monter le voyageur') }}</button>
                                             </form>

@@ -173,7 +173,13 @@
         result.innerHTML = html;
         updateStats(data.stats);
 
-        result.querySelectorAll('[data-board]').forEach((btn) => btn.addEventListener('click', () => board(data.urls.embarquer, btn.dataset.board, btn)));
+        // taking money asks first; boarding a paid ticket stays one click (queue at the bus door)
+        result.querySelectorAll('[data-board]').forEach((btn) => btn.addEventListener('click', () => {
+            const payer = btn.dataset.board
+                ? BlastiAlert.confirm('Encaisser ' + dh(b.reste) + ' (' + MODES[btn.dataset.board] + ') ?', 'Siège ' + b.siege + '. Le montant est ajouté à votre caisse, puis le voyageur monte.', { confirmText: 'Oui, encaisser', glyph: 'cash' })
+                : Promise.resolve(true);
+            payer.then((oui) => { if (oui) board(data.urls.embarquer, btn.dataset.board, btn); });
+        }));
         result.querySelector('[data-next]').addEventListener('click', resume);
     }
 

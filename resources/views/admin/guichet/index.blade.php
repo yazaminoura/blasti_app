@@ -44,20 +44,24 @@
                 <thead><tr><th>Départ</th><th>Trajet</th><th>Compagnie · bus</th><th>Places libres</th><th class="text-end">Prix</th><th></th></tr></thead>
                 <tbody>
                     @foreach ($departs as $d)
-                        @php $actif = $choix?->voyage->id === $d->voyage->id; @endphp
+                        @php $actif = $choix && $choix->voyage->id === $d->voyage->id && $choix->depart->id === $d->depart->id && $choix->arrivee->id === $d->arrivee->id; @endphp
                         <tr @class(['table-active' => $actif])>
                             <td class="sa-num">
                                 <div class="sa-strong">{{ $d->depart->passage_at->format('H:i') }}</div>
                                 <div class="sa-sub">{{ $d->depart->passage_at->isToday() ? 'Aujourd\'hui' : ($d->depart->passage_at->isTomorrow() ? 'Demain' : ucfirst($d->depart->passage_at->translatedFormat('D d/m'))) }}</div>
                             </td>
                             <td><span class="sa-route">{{ $d->depart->ville?->ville ?? $d->voyage->villeDepart?->ville }} <i class="bi bi-arrow-right"></i> {{ $d->arrivee->ville?->ville ?? $d->voyage->villeArrivee?->ville }}</span>
-                                <div class="sa-sub">arrivée {{ $d->arrivee->passage_at->format('H:i') }}</div></td>
+                                <div class="sa-sub">arrivée {{ $d->arrivee->passage_at->format('H:i') }}
+                                    @unless ($d->complet)
+                                        · <span class="sa-chip info" title="Même bus, même contrôleur">bus {{ $d->voyage->villeDepart?->ville }} → {{ $d->voyage->villeArrivee?->ville }}</span>
+                                    @endunless
+                                </div></td>
                             <td>{{ $d->voyage->autocar?->societe?->raison_social }}<div class="sa-sub">{{ $d->voyage->autocar?->matricule }}</div></td>
                             <td><span class="sa-chip {{ $d->libres ? ($d->libres < 5 ? 'warning' : 'success') : 'danger' }}">{{ $d->libres }} / {{ $d->voyage->autocar?->nbr_siege }}</span></td>
                             <td class="text-end sa-num sa-strong">{{ number_format($d->prix, 2, ',', ' ') }} DH</td>
                             <td class="text-end">
                                 @if ($d->libres)
-                                    <a href="{{ route('reservation.admin.guichet', ['de' => $de, 'a' => $a, 'date' => $date, 'voyage' => $d->voyage->id]) }}#vente"
+                                    <a href="{{ route('reservation.admin.guichet', ['de' => $de, 'a' => $a, 'date' => $date, 'voyage' => $d->voyage->id, 'ad' => $d->depart->id, 'aa' => $d->arrivee->id]) }}#vente"
                                        class="btn btn-sm {{ $actif ? 'btn-primary' : 'btn-soft' }}" data-sa-row-link="edit">Choisir</a>
                                 @else
                                     <span class="sa-sub">Complet</span>
@@ -74,7 +78,8 @@
 {{-- 2. seats, traveller, payment --}}
 @if ($choix)
     @php $total = (int) ($choix->voyage->autocar?->nbr_siege ?? 0); @endphp
-    <form method="POST" action="{{ route('reservation.admin.guichet.vendre') }}" id="vente" class="row g-3" data-prix="{{ $choix->prix }}">
+    <form method="POST" action="{{ route('reservation.admin.guichet.vendre') }}" id="vente" class="row g-3" data-prix="{{ $choix->prix }}"
+          data-bl-confirm="Encaisser et émettre les billets ?" data-bl-confirm-button="Oui, encaisser" data-bl-glyph="ticket">
         @csrf
         <input type="hidden" name="voyage_id" value="{{ $choix->voyage->id }}">
         <input type="hidden" name="arret_depart_id" value="{{ $choix->depart->id }}">
@@ -141,6 +146,11 @@
                 form.querySelector('[data-nb]').textContent = coches.length;
                 form.querySelector('[data-total]').textContent = (coches.length * prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DH';
                 form.querySelector('[data-vendre]').disabled = coches.length === 0;
+                // what the confirmation popup says: seats, total, how it's paid
+                var mode = form.querySelector('input[name="mode"]:checked');
+                form.dataset.blConfirmText = 'Siège(s) ' + Array.prototype.map.call(coches, function (c) { return c.value; }).join(', ')
+                    + ' · ' + (coches.length * prix).toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' DH'
+                    + (mode ? ' · ' + mode.nextElementSibling.textContent.trim() : '');
                 form.querySelectorAll('input[name="seats[]"]:not(:checked):not([disabled])').forEach(function (cb) {
                     cb.closest('.sa-seat').classList.toggle('is-full', coches.length >= max);
                     cb.disabled = false;
@@ -152,7 +162,7 @@
                 }
                 maj();
             });
-            form.addEventListener('submit', function () { form.querySelector('[data-vendre]').disabled = true; }); // no double sale
+            form.addEventListener('submit', function (e) { if (!e.defaultPrevented) form.querySelector('[data-vendre]').disabled = true; }); // no double sale
             maj();
         })();
     </script>
