@@ -4,7 +4,7 @@
     [$titre, $texte, $tone, $icon] = match ($etat) {
         'annule' => [__('Ce billet est annulé'), __('Il n\'est plus possible de le confirmer. Vous pouvez réserver à nouveau si des places sont libres.'), 'danger', 'isax-close-circle'],
         'parti' => [__('Ce voyage est déjà parti'), __('Il n\'y a plus rien à confirmer pour ce billet.'), 'secondary', 'isax-clock'],
-        default => [__('Merci, votre siège est gardé !'), __('Votre présence est confirmée. Pensez à payer :montant au contrôleur avant de monter.', ['montant' => number_format($r->resteAPayer(), 2, ',', ' ') . ' ' . __('DH')]), 'success', 'isax-tick-circle'],
+        default => [__('Merci, votre siège est gardé !'), __('Votre présence est confirmée. Payez :montant avant le :date à :heure, sinon le billet sera annulé. Si votre bus part avant, payez au contrôleur avant de monter.', ['montant' => number_format($r->resteAPayer(), 2, ',', ' ') . ' ' . __('DH'), 'date' => $r->paymentDeadline()->translatedFormat('d M'), 'heure' => $r->paymentDeadline()->format('H:i')]), 'success', 'isax-tick-circle'],
     };
 @endphp
 <x-app-layout>

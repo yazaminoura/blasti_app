@@ -20,12 +20,13 @@ use Illuminate\Support\Facades\Mail;
  *  - modifiee:  the client moved the ticket to another departure, with the new PDF ticket
  *  - presence:  unpaid ticket, "confirm you are coming" button (routes/console.php reservations:presence)
  *  - sans_confirmation: unpaid ticket cancelled because the presence was not confirmed in time
+ *  - paiement:  receipt of a payment taken by the staff (counter or bus door): amount, mode, who, when
  */
 class ReservationMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public const TYPES = ['confirmee', 'rappel', 'annulee', 'modifiee', 'presence', 'sans_confirmation', 'avis'];
+    public const TYPES = ['confirmee', 'rappel', 'annulee', 'modifiee', 'presence', 'sans_confirmation', 'avis', 'paiement'];
 
     /** Every ticket covered by this e-mail (several seats booked together = one e-mail, one PDF page each). */
     public \Illuminate\Support\Collection $billets;
@@ -45,7 +46,7 @@ class ReservationMail extends Mailable
         $billets = $reservation instanceof Reservation ? collect([$reservation]) : $reservation->values();
         $reservation = $billets->first();
 
-        if (! $reservation?->user?->email) {
+        if (! $reservation?->user?->email || str_ends_with($reservation->user->email, '.invalid')) {
             return false;
         }
         try {
@@ -71,9 +72,10 @@ class ReservationMail extends Mailable
             'rappel' => __('Rappel : votre bus :trajet part demain | :brand', ['trajet' => $trajet, 'brand' => $brand]),
             'annulee' => __('Billet #:id annulé | :brand', ['id' => $this->reservation->id, 'brand' => $brand]),
             'modifiee' => __('Billet #:id modifié : :trajet | :brand', ['id' => $this->reservation->id, 'trajet' => $trajet, 'brand' => $brand]),
+            'paiement' => __('Reçu : paiement du billet #:id | :brand', ['id' => $this->reservation->id, 'brand' => $brand]),
             'avis' => __('Comment s\'est passé votre voyage :trajet ? | :brand', ['trajet' => $trajet, 'brand' => $brand]),
             'presence' => __('Action requise : confirmez votre voyage :trajet | :brand', ['trajet' => $trajet, 'brand' => $brand]),
-            'sans_confirmation' => __('Billet #:id annulé (présence non confirmée) | :brand', ['id' => $this->reservation->id, 'brand' => $brand]),
+            'sans_confirmation' => __('Billet #:id annulé (non payé à temps) | :brand', ['id' => $this->reservation->id, 'brand' => $brand]),
             default => $this->billets->count() > 1
                 ? __('Vos :count billets :trajet sont confirmés | :brand', ['count' => $this->billets->count(), 'trajet' => $trajet, 'brand' => $brand])
                 : __('Votre billet :trajet est confirmé | :brand', ['trajet' => $trajet, 'brand' => $brand]),
@@ -94,7 +96,7 @@ class ReservationMail extends Mailable
     public function attachments(): array
     {
         // only tickets that are still valid get the PDF
-        if (in_array($this->type, ['annulee', 'presence', 'sans_confirmation', 'avis'], true)) {
+        if (in_array($this->type, ['annulee', 'presence', 'sans_confirmation', 'avis', 'paiement'], true)) {
             return [];
         }
 

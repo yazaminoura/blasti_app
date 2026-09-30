@@ -16,6 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\ResetSocieteScope::class,
             \App\Http\Middleware\SetLocale::class,
+            // one open session per team / company account (the latest login wins)
+            \App\Http\Middleware\UneSessionParCompte::class,
         ]);
 
         // company filter before the route records are loaded (another company's record = 404)

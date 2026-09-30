@@ -856,5 +856,18 @@
     "Pas pour ce départ": "Not for this departure",
     "Ce billet est pour le :quand.": "This ticket is for :quand.",
     "À encaisser : :montant DH": "To collect: :montant DH",
-    "Siège :siege": "Seat :siege"
+    "Siège :siege": "Seat :siege",
+    "Reçu : paiement du billet #:id | :brand": "Receipt: payment for ticket #:id | :brand",
+    "Paiement reçu": "Payment received",
+    "Nous avons bien reçu :montant DH (:mode) pour ce billet, le :date à :heure, encaissés par :nom. Gardez ce message : c'est votre reçu.": "We received :montant DH (:mode) for this ticket on :date at :heure, collected by :nom. Keep this message: it is your receipt.",
+    "Vérifié en scannant le QR code. Vous payez au guichet ou à bord ? Vous recevez un reçu par e-mail : pas de reçu = signalez-le au :telephone.": "Checked by scanning the QR code. Paying at the counter or on board? You get a receipt by e-mail: no receipt = report it at :telephone.",
+    "Vous avez déjà réservé :max fois sans payer ce mois-ci : merci de payer par carte. Le paiement plus tard revient le mois prochain.": "You have already booked :max times without paying this month: please pay by card. Pay later will be back next month.",
+    "Votre billet n'est pas encore payé. Payez-le ou confirmez que vous voyagez avant le :date à :heure, sinon il sera annulé et le siège remis en vente. Si vous confirmez, vous avez jusqu'au :date2 à :heure2 pour payer. Si votre bus part avant, vous payez au contrôleur.": "Your ticket is not paid yet. Pay it or confirm you are travelling before :date at :heure, otherwise it will be cancelled and the seat put back on sale. If you confirm, you have until :date2 at :heure2 to pay. If your bus leaves before, you pay the controller.",
+    "Ce billet n'a pas été payé à temps : il a été annulé et le siège remis en vente. Vous pouvez réserver à nouveau si des places sont libres.": "This ticket was not paid in time: it has been cancelled and the seat put back on sale. You can book again if seats are free.",
+    "Billet #:id annulé (non payé à temps) | :brand": "Ticket #:id cancelled (not paid in time) | :brand",
+    "Votre présence est confirmée. Payez :montant avant le :date à :heure, sinon le billet sera annulé. Si votre bus part avant, payez au contrôleur avant de monter.": "Your presence is confirmed. Pay :montant before :date at :heure, otherwise the ticket will be cancelled. If your bus leaves before, pay the controller before boarding.",
+    "Payez ou confirmez votre présence avant le :date à :heure, sinon ce billet non payé sera annulé.": "Pay or confirm your presence before :date at :heure, otherwise this unpaid ticket will be cancelled.",
+    "Payez ce billet avant le :date à :heure, sinon il sera annulé.": "Pay this ticket before :date at :heure, otherwise it will be cancelled.",
+    "Nous vous enverrons un e-mail :h h après la réservation : payez ou confirmez votre présence, sinon les billets sont annulés. Si le bus part avant, vous payez au contrôleur.": "We will send you an e-mail :h h after booking: pay or confirm your presence, otherwise the tickets are cancelled. If the bus leaves before, you pay the controller.",
+    "Billet non payé : :h heures après la réservation, le client reçoit un e-mail. Sans paiement ni confirmation :l heures plus tard, le billet est annulé sans frais. S'il confirme sa présence, il doit payer dans les :p heures suivant l'e-mail. Un bus qui part avant ces délais se paie au contrôleur.": "Unpaid ticket: :h hours after booking, the client receives an e-mail. Without payment or confirmation :l hours later, the ticket is cancelled free of charge. If the client confirms, they must pay within :p hours of the e-mail. A bus leaving before these deadlines is paid to the controller."
 }

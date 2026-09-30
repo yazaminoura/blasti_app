@@ -41,7 +41,7 @@ class SiteSettingsTest extends TestCase
     public function test_staff_with_a_role_cannot_change_the_contact_details(): void
     {
         $staff = User::factory()->create(['isadmin' => 1]);
-        $staff->roles()->attach(Role::create(['name' => 'Contrôleur', 'slug' => 'controleur'])->id);
+        $staff->roles()->attach(Role::create(['name' => 'Contrôleur test', 'slug' => 'controleur-test'])->id);
 
         $this->actingAs($staff)->get(route('admin.coordonnees.edit'))->assertForbidden();
     }

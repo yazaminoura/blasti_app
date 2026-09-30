@@ -31,40 +31,40 @@ Artisan::command('reservations:expirer', function () {
     $this->info(Reservation::expirePendingPayments() . ' réservation(s) en attente de paiement libérée(s).');
 })->purpose('Libère les sièges des paiements par carte non aboutis');
 
-// Unpaid tickets (pay at boarding), config safar.confirmation:
-//  1. `demande_heures` before boarding: e-mail "confirm you are coming" (signed link, no login needed)
-//  2. `limite_heures` before boarding, still no answer: the ticket is cancelled, the seat goes back on sale
+// Unpaid tickets (pay later, not agency), config safar.confirmation:
+//  1. `demande_heures` after booking, still unpaid: e-mail "pay, or confirm you are coming" (signed link, no login)
+//  2. cancelled `limite_heures` after the e-mail without payment nor answer,
+//     or `paiement_heures` after the e-mail if the client confirmed but still did not pay
+//  Never after departure: then the controller's scan decides (paid at the door, or no-show).
 Artisan::command('reservations:presence', function () {
     if (! config('safar.confirmation.active')) {
         return $this->info('Confirmation de présence désactivée.');
     }
-    $demande = (int) config('safar.confirmation.demande_heures');
-    $limite = (int) config('safar.confirmation.limite_heures');
     $asked = $cancelled = 0;
 
     Reservation::where('statut', Reservation::CONFIRMEE)
-        ->whereNull('paye_le')->whereNull('presence_confirmee_le')
-        ->whereDate('date_depart', '<=', now()->addHours($demande)->toDateString())
+        ->whereNull('paye_le')
+        ->whereDate('date_depart', '>=', today())
+        ->whereHas('modeReglement', fn ($q) => $q->where('en_ligne', false)->where('en_agence', false))
         ->with('user')
-        ->each(function (Reservation $r) use ($demande, $limite, &$asked, &$cancelled) {
-            $hoursLeft = now()->diffInMinutes($r->departAt(), false) / 60;
-            if ($hoursLeft <= 0) {
+        ->each(function (Reservation $r) use (&$asked, &$cancelled) {
+            if ($r->departAt()->isPast()) {
                 return; // bus gone: the controller's scan decides (no-show)
             }
-            if ($r->confirmation_demandee_le === null && $hoursLeft <= $demande && $hoursLeft > $limite) {
-                if (ReservationMail::sendTo($r, 'presence')) {
+            if ($r->confirmation_demandee_le === null) {
+                if ($r->presenceAskedAt()->lte(now()) && ReservationMail::sendTo($r, 'presence')) {
                     $r->forceFill(['confirmation_demandee_le' => now()])->save();
                     $asked++;
                 }
-            } elseif ($r->confirmation_demandee_le !== null && $hoursLeft <= $limite) {
+            } elseif (($due = $r->cancellationDue()) && $due->lte(now())) {
                 $r->cancel('systeme');
                 ReservationMail::sendTo($r, 'sans_confirmation');
                 $cancelled++;
             }
         });
 
-    $this->info("{$asked} demande(s) de confirmation envoyée(s), {$cancelled} billet(s) non confirmé(s) annulé(s).");
-})->purpose('Demande aux voyageurs non payés de confirmer leur présence, annule sans réponse');
+    $this->info("{$asked} e-mail(s) « payez ou confirmez » envoyé(s), {$cancelled} billet(s) non payé(s) annulé(s).");
+})->purpose('Billets non payés : e-mail 24 h après la réservation, annulation sans paiement');
 
 // The day after the trip: "how was it?" e-mail with the review button (once per ticket, trips of the last 3 days)
 Artisan::command('reservations:avis', function () {

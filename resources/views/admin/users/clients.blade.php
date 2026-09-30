@@ -4,7 +4,7 @@
 @section('content')
 <x-admin.page-header title="Clients" subtitle="Les comptes clients inscrits sur le site.">
     <a href="{{ route('admin.export.users') }}" class="btn btn-soft"><i class="bi bi-download"></i> Exporter</a>
-    @if (auth()->user()->hasPermission('utilisateurs.create'))
+    @if (auth()->user()->hasPermission('clients.create'))
         <a href="{{ route('admin.users.create') }}" class="btn btn-primary"><i class="bi bi-person-plus"></i> Nouveau client</a>
     @endif
 </x-admin.page-header>

@@ -25,7 +25,7 @@
             <button type="submit" class="btn btn-primary"><i class="bi bi-cash-coin"></i> Marquer payée</button>
         </form>
     @endif
-    @if ($canUpdate && $reservation->needsRefund())
+    @if (auth()->user()->hasPermission('reservations.rembourser') && $reservation->needsRefund())
         <form action="{{ route('reservation.admin.rembourser', $reservation) }}" method="POST" class="d-inline">
             @csrf
             @method('PATCH')
@@ -73,6 +73,7 @@
                 <dt>Type de voyage</dt><dd>{{ $reservation->typeVoyage?->type_voyage ?? '—' }}</dd>
                 <dt>Autocar</dt><dd class="sa-mono">{{ $reservation->autocar?->matricule ?? '—' }}</dd>
                 <dt>Société</dt><dd>{{ $reservation->autocar?->societe?->raison_social ?? '—' }}</dd>
+                <dt>Vendu</dt><dd>{{ $reservation->vendu_par ? 'Au guichet par ' . ($reservation->venduPar?->name ?? '—') : 'En ligne par le client' }}</dd>
             </dl>
         </x-admin.card>
     </div>

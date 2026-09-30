@@ -4,12 +4,16 @@
 @section('content')
 @php
     $d = $voyage->departAt();
-    $canUpdate = auth()->user()->hasPermission('reservations.update');
+    $canUpdate = auth()->user()->hasPermission('reservations.update') || auth()->user()->hasPermission('scanner.use');
 @endphp
 
 <x-admin.page-header :title="'Passagers · ' . $voyage->villeDepart?->ville . ' → ' . $voyage->villeArrivee?->ville"
                      :subtitle="$d->translatedFormat('l d F Y') . ' à ' . $d->format('H:i') . ' · ' . $voyage->autocar?->societe?->raison_social . ' · ' . $voyage->autocar?->matricule"
-                     :back="route('voyages.index')" backLabel="Voyages">
+                     :back="auth()->user()->hasPermission('voyages.read') ? route('voyages.index') : route('reservation.admin.scanner', ['voyage' => $voyage->id])"
+                     :backLabel="auth()->user()->hasPermission('voyages.read') ? 'Voyages' : 'Scanner'">
+    @if (auth()->user()->hasPermission('scanner.use'))
+        <a href="{{ route('reservation.admin.scanner', ['voyage' => $voyage->id]) }}" class="btn btn-primary"><i class="bi bi-qr-code-scan"></i> Scanner ce bus</a>
+    @endif
     <button type="button" class="btn btn-soft" onclick="window.print()"><i class="bi bi-printer"></i> Imprimer</button>
 </x-admin.page-header>
 

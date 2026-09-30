@@ -165,10 +165,30 @@ class Reservation extends Model
         return \Illuminate\Support\Facades\URL::signedRoute('ticket.presence', $this);
     }
 
-    /** Last moment to confirm presence before the unpaid ticket is cancelled. */
+    /** When the "pay or confirm" e-mail is (or was) sent: `demande_heures` after booking. */
+    public function presenceAskedAt(): \Carbon\Carbon
+    {
+        return ($this->confirmation_demandee_le ?? $this->created_at->copy()->addHours((int) config('safar.confirmation.demande_heures')))->copy();
+    }
+
+    /** Last moment to pay or answer the e-mail before the unpaid ticket is cancelled. */
     public function presenceDeadline(): \Carbon\Carbon
     {
-        return $this->departAt()->subHours((int) config('safar.confirmation.limite_heures'));
+        return $this->presenceAskedAt()->addHours((int) config('safar.confirmation.limite_heures'));
+    }
+
+    /** Client confirmed but has not paid: last moment to pay (online, agency or counter). */
+    public function paymentDeadline(): \Carbon\Carbon
+    {
+        return $this->presenceAskedAt()->addHours((int) config('safar.confirmation.paiement_heures'));
+    }
+
+    /** When this unpaid ticket will be cancelled, or null if never (the bus leaves first: paid at the door). */
+    public function cancellationDue(): ?\Carbon\Carbon
+    {
+        $due = $this->presence_confirmee_le ? $this->paymentDeadline() : $this->presenceDeadline();
+
+        return $due->lt($this->departAt()) ? $due : null;
     }
 
     /** What the client really paid (tickets paid before this was stored: their price). */
@@ -411,6 +431,12 @@ class Reservation extends Model
     }
 
     /** Staff member who let the traveller in. */
+    /** Staff member who sold the ticket at the counter (Guichet); null = booked online. */
+    public function venduPar()
+    {
+        return $this->belongsTo(User::class, 'vendu_par');
+    }
+
     public function embarquePar()
     {
         return $this->belongsTo(User::class, 'embarque_par');
@@ -431,7 +457,7 @@ class Reservation extends Model
      * A staff member collects what is still due (whole price, or the supplement after a change of departure).
      * Returns the amount collected, 0 if nothing was due.
      */
-    public function encaisser(User $par, string $mode = 'especes'): float
+    public function encaisser(User $par, string $mode = 'especes', bool $recu = true): float
     {
         $montant = $this->resteAPayer();
         if ($montant <= 0) {
@@ -442,6 +468,10 @@ class Reservation extends Model
             $this->encaissements()->create(['user_id' => $par->id, 'montant' => $montant, 'mode' => $mode]);
             $this->markPaid($mode === 'carte' ? 'guichet-carte' : 'guichet');
         });
+        // receipt to the traveller at once: a payment the staff did not record = no receipt = the client complains
+        if ($recu) {
+            \App\Mail\ReservationMail::sendTo($this, 'paiement');
+        }
 
         return $montant;
     }

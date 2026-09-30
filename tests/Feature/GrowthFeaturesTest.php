@@ -185,7 +185,7 @@ class GrowthFeaturesTest extends TestCase
         $pasMien = $this->voyage(3, null, null, 40, $autre);
         $this->book($pasMien, [1]);
 
-        $role = Role::create(['name' => 'Compagnie', 'slug' => 'compagnie']);
+        $role = Role::create(['name' => 'Compagnie test', 'slug' => 'compagnie-test']);
         $perms = collect(['voyages.read', 'voyages.update', 'voyages.create', 'reservations.read', 'reservations.update'])
             ->map(fn ($p) => \App\Models\Permission::firstOrCreate(['name' => $p], ['slug' => \Illuminate\Support\Str::slug($p)])->id);
         $role->permissions()->sync($perms);

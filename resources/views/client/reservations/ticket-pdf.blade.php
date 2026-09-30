@@ -108,13 +108,9 @@
                         <tr>
                             <td><div class="label">{{ __('Prix') }}</div><div class="val">{{ $dh($r->total()) }} <span style="font-weight: normal; color: #64748b; font-size: 10px;">· {{ __($r->modeReglement?->mode_reglement ?? '—') }}</span></div></td>
                             <td>
+                                {{-- no paid / to-pay stamp: the controller always scans the QR code to know --}}
                                 <div class="label" style="margin-bottom: 3px;">{{ __('Paiement') }}</div>
-                                @if ($reste > 0)
-                                    <span class="stamp due">{{ $r->isPaid() ? __('SUPPLÉMENT : :montant', ['montant' => $dh($reste)]) : __('À PAYER : :montant', ['montant' => $dh($reste)]) }}</span>
-                                    <div class="date" style="margin-top: 4px;">{{ __('à régler à l\'embarquement') }}</div>
-                                @else
-                                    <span class="stamp paid">{{ __('PAYÉ') }}</span>
-                                @endif
+                                <div class="date" style="line-height: 1.4;">{{ __('Vérifié en scannant le QR code. Vous payez au guichet ou à bord ? Vous recevez un reçu par e-mail : pas de reçu = signalez-le au :telephone.', ['telephone' => config('safar.contact.telephone')]) }}</div>
                             </td>
                         </tr>
                     </table>

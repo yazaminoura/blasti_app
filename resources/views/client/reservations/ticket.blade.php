@@ -30,11 +30,16 @@
                                 <div class="alert alert-warning">{{ __('Paiement en cours de confirmation par la banque. Rechargez la page dans un instant.') }}</div>
                             @elseif (! $reservation->isPaid())
                                 <div class="alert alert-info">{{ __('Billet confirmé. Le paiement (:montant DH) se fait à l\'embarquement.', ['montant' => number_format($reservation->total(), 2, ',', ' ')]) }}</div>
-                                @if ($reservation->awaitsPresence() && $reservation->departAt()->isFuture() && auth()->id() === $reservation->user_id)
-                                    {{-- unpaid: the seat is kept only if the client confirms (config safar.confirmation) --}}
+                                @php $annuleLe = config('safar.confirmation.active') && ! $reservation->modeReglement?->en_agence ? $reservation->cancellationDue() : null; @endphp
+                                @if ($annuleLe && $annuleLe->isFuture() && auth()->id() === $reservation->user_id)
+                                    {{-- unpaid: cancelled at this time unless paid (config safar.confirmation) --}}
                                     <div class="alert alert-warning d-flex flex-wrap align-items-center justify-content-between gap-2">
-                                        <span>{{ __('Confirmez votre présence avant le :date à :heure, sinon ce billet non payé sera annulé.', ['date' => $reservation->presenceDeadline()->translatedFormat('d M'), 'heure' => $reservation->presenceDeadline()->format('H:i')]) }}</span>
-                                        <a href="{{ $reservation->presenceUrl() }}" class="btn btn-success btn-sm">{{ __('Je confirme ma présence') }}</a>
+                                        @if ($reservation->awaitsPresence())
+                                            <span>{{ __('Payez ou confirmez votre présence avant le :date à :heure, sinon ce billet non payé sera annulé.', ['date' => $annuleLe->translatedFormat('d M'), 'heure' => $annuleLe->format('H:i')]) }}</span>
+                                            <a href="{{ $reservation->presenceUrl() }}" class="btn btn-success btn-sm">{{ __('Je confirme ma présence') }}</a>
+                                        @else
+                                            <span>{{ __('Payez ce billet avant le :date à :heure, sinon il sera annulé.', ['date' => $annuleLe->translatedFormat('d M'), 'heure' => $annuleLe->format('H:i')]) }}</span>
+                                        @endif
                                     </div>
                                 @endif
                             @endif

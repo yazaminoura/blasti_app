@@ -15,7 +15,7 @@ class AdminAccessTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const SERVICES = ['dashboard', 'utilisateurs', 'roles', 'villes', 'type voyages', 'mode reglements', 'reservations', 'voyages', 'societes', 'autocars', 'equipements', 'options', 'promotions', 'avis', 'statistiques'];
+    private const SERVICES = ['dashboard', 'clients', 'utilisateurs', 'roles', 'villes', 'type voyages', 'mode reglements', 'reservations', 'voyages', 'societes', 'autocars', 'equipements', 'options', 'promotions', 'avis', 'statistiques'];
 
     /** @return array<string, string> route name => uri */
     private function adminPages(): array
@@ -49,7 +49,7 @@ class AdminAccessTest extends TestCase
     {
         $role = Role::create(['name' => 'Villes', 'slug' => 'villes']);
         foreach (['villes.read', 'villes.create', 'villes.update', 'villes.delete'] as $name) {
-            $role->permissions()->attach(Permission::create(['name' => $name, 'slug' => str_replace('.', '-', $name)]));
+            $role->permissions()->attach(Permission::firstOrCreate(['name' => $name], ['slug' => str_replace('.', '-', $name)]));
         }
         $staff = User::factory()->create(['isadmin' => 1]);
         $staff->roles()->attach($role);
@@ -78,8 +78,11 @@ class AdminAccessTest extends TestCase
         $role = Role::create(['name' => 'Tout', 'slug' => 'tout']);
         foreach (self::SERVICES as $service) {
             foreach (['create', 'read', 'update', 'delete'] as $action) {
-                $role->permissions()->attach(Permission::create(['name' => "$service.$action", 'slug' => str_replace(' ', '-', "$service-$action")]));
+                $role->permissions()->attach(Permission::firstOrCreate(['name' => "$service.$action"], ['slug' => str_replace(' ', '-', "$service-$action")]));
             }
+        }
+        foreach (array_keys(\App\Support\Droits::SPECIAUX) as $name) {
+            $role->permissions()->attach(Permission::firstOrCreate(['name' => $name], ['slug' => \Illuminate\Support\Str::slug($name)]));
         }
         $staff = User::factory()->create(['isadmin' => 1]);
         $staff->roles()->attach($role);

@@ -5,19 +5,20 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Permission;
 use App\Models\Role;
+use App\Support\Droits;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class RoleController extends Controller
 {
-    /** Rows and columns of the permission grid; a permission is "<service in lowercase>.<action>". */
-    private const SERVICES = ['Dashboard', 'Utilisateurs', 'Roles', 'Villes', 'Type Voyages', 'Mode Reglements', 'Reservations', 'Voyages', 'Societes', 'Autocars', 'Equipements', 'Options', 'Promotions', 'Avis', 'Statistiques'];
-    private const ACTIONS = ['read', 'create', 'update', 'delete'];
+    /** Rows and columns of the permission grid + special rights: see App\Support\Droits. */
+    private const SERVICES = Droits::SERVICES;
+    private const ACTIONS = Droits::ACTIONS;
 
     public function create()
     {
-        return view('admin.roles.create', ['services' => self::SERVICES, 'actions' => self::ACTIONS]);
+        return view('admin.roles.create', ['services' => self::SERVICES, 'actions' => self::ACTIONS, 'speciaux' => Droits::SPECIAUX]);
     }
 
     public function store(Request $request)
@@ -39,6 +40,7 @@ class RoleController extends Controller
             'role' => $role,
             'services' => self::SERVICES,
             'actions' => self::ACTIONS,
+            'speciaux' => Droits::SPECIAUX,
             'rolePermissions' => $role->permissions->pluck('name')->toArray(),
         ]);
     }
@@ -83,14 +85,7 @@ class RoleController extends Controller
 
     private static function allPermissions(): array
     {
-        $names = [];
-        foreach (self::SERVICES as $service) {
-            foreach (self::ACTIONS as $action) {
-                $names[] = strtolower($service) . '.' . $action;
-            }
-        }
-
-        return $names;
+        return Droits::toutes();
     }
 
     private function syncPermissions(Role $role, array $names): void

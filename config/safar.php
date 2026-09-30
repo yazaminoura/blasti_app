@@ -36,12 +36,18 @@ return [
      *  - absences_max: after this many no-shows (unpaid ticket, bus gone, never scanned on a bus where the
      *    controller did scan), "pay at boarding" is no longer offered to the account (card only).
      */
+    // Unpaid ticket (pay later): e-mail `demande_heures` after booking; cancelled `limite_heures` after the e-mail
+    // without payment nor answer, or `paiement_heures` after the e-mail if the client confirmed but still did not pay.
+    // A bus leaving before the deadline: the client pays the controller at the door (never cancelled after departure).
     'confirmation' => [
         'active' => (bool) env('SAFAR_CONFIRMATION_PRESENCE', true),
-        'demande_heures' => (int) env('SAFAR_CONFIRMATION_DEMANDE_HEURES', 48),
+        'demande_heures' => (int) env('SAFAR_CONFIRMATION_DEMANDE_HEURES', 24),
         'limite_heures' => (int) env('SAFAR_CONFIRMATION_LIMITE_HEURES', 24),
+        'paiement_heures' => (int) env('SAFAR_CONFIRMATION_PAIEMENT_HEURES', 36),
     ],
     'max_non_payes' => (int) env('SAFAR_MAX_NON_PAYES', 4),
+    // orders booked without paying (at boarding or at the agency) per calendar month; then card only (0 = no limit)
+    'non_payes_par_mois' => (int) env('SAFAR_NON_PAYES_PAR_MOIS', 2),
     'absences_max' => (int) env('SAFAR_ABSENCES_MAX', 2),
 
     // Return trip booked after an outbound order (same client, other way): % off the return (0 = no discount)

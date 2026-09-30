@@ -53,37 +53,49 @@ class UnpaidTicketRulesTest extends TestCase
         ]);
     }
 
-    public function test_unpaid_ticket_is_asked_to_confirm_then_cancelled_without_answer(): void
+    public function test_unpaid_ticket_gets_an_email_after_24h_then_is_cancelled_24h_later_without_answer(): void
     {
         $this->book($this->voyage(24 * 5), [4]);
         $ticket = Reservation::sole();
-        $this->assertNull($ticket->presence_confirmee_le);
+        $booked = $ticket->created_at->copy();
 
-        // 40 h before: the e-mail with the "I'm coming" button
-        $this->travelTo($ticket->departAt()->subHours(40));
+        // 23 h after booking: nothing yet
+        $this->travelTo($booked->copy()->addHours(23));
+        $this->artisan('reservations:presence')->assertSuccessful();
+        Mail::assertNotSent(ReservationMail::class, fn ($mail) => $mail->type === 'presence');
+
+        // 24 h after booking: the "pay or confirm" e-mail
+        $this->travelTo($booked->copy()->addHours(24)->addMinute());
         $this->artisan('reservations:presence')->assertSuccessful();
         $this->assertNotNull($ticket->fresh()->confirmation_demandee_le);
         Mail::assertSent(ReservationMail::class, fn ($mail) => $mail->type === 'presence');
 
-        // 20 h before, still no answer: cancelled, seat free again
-        $this->travelTo($ticket->departAt()->subHours(20));
+        // 24 h after the e-mail, no payment, no answer: cancelled, seat free again
+        $this->travelTo($booked->copy()->addHours(48)->addMinutes(2));
         $this->artisan('reservations:presence')->assertSuccessful();
         $this->assertTrue($ticket->fresh()->isCancelled());
         Mail::assertSent(ReservationMail::class, fn ($mail) => $mail->type === 'sans_confirmation');
     }
 
-    public function test_confirming_presence_keeps_the_ticket(): void
+    public function test_confirmed_but_unpaid_is_cancelled_36h_after_the_email(): void
     {
         $this->book($this->voyage(24 * 5), [4]);
         $ticket = Reservation::sole();
+        $booked = $ticket->created_at->copy();
 
-        $this->travelTo($ticket->departAt()->subHours(40));
+        $this->travelTo($booked->copy()->addHours(24)->addMinute());
         $this->artisan('reservations:presence');
         $this->get($ticket->fresh()->presenceUrl())->assertOk()->assertSee(__('Merci, votre siège est gardé !'));
 
-        $this->travelTo($ticket->departAt()->subHours(20));
+        // 30 h after the e-mail: confirmed, still kept
+        $this->travelTo($booked->copy()->addHours(24 + 30));
         $this->artisan('reservations:presence');
         $this->assertFalse($ticket->fresh()->isCancelled());
+
+        // 36 h after the e-mail, still not paid: cancelled
+        $this->travelTo($booked->copy()->addHours(24 + 36)->addMinutes(2));
+        $this->artisan('reservations:presence');
+        $this->assertTrue($ticket->fresh()->isCancelled());
     }
 
     public function test_a_paid_ticket_is_never_asked_nor_cancelled(): void
@@ -91,21 +103,30 @@ class UnpaidTicketRulesTest extends TestCase
         $this->book($this->voyage(24 * 5), [4]);
         $ticket = Reservation::sole();
         $ticket->markPaid('guichet');
+        $booked = $ticket->created_at->copy();
 
-        $this->travelTo($ticket->departAt()->subHours(40));
+        $this->travelTo($booked->copy()->addHours(25));
         $this->artisan('reservations:presence');
-        $this->travelTo($ticket->departAt()->subHours(20));
+        $this->travelTo($booked->copy()->addHours(70));
         $this->artisan('reservations:presence');
 
         $this->assertFalse($ticket->fresh()->isCancelled());
         Mail::assertNotSent(ReservationMail::class, fn ($mail) => $mail->type === 'presence');
     }
 
-    public function test_a_late_booking_counts_as_confirmed(): void
+    public function test_a_bus_leaving_before_the_deadline_is_paid_at_the_door_never_cancelled(): void
     {
-        $this->book($this->voyage(10), [4]);
+        $this->book($this->voyage(30), [4]);
+        $ticket = Reservation::sole();
+        $booked = $ticket->created_at->copy();
 
-        $this->assertNotNull(Reservation::sole()->presence_confirmee_le);
+        // e-mail at 24 h, but the 24 h deadline is after departure (30 h): not cancelled before the bus leaves
+        $this->travelTo($booked->copy()->addHours(24)->addMinute());
+        $this->artisan('reservations:presence');
+        $this->assertNull($ticket->fresh()->cancellationDue());
+        $this->travelTo($booked->copy()->addHours(29));
+        $this->artisan('reservations:presence');
+        $this->assertFalse($ticket->fresh()->isCancelled());
     }
 
     public function test_unpaid_seats_are_capped(): void

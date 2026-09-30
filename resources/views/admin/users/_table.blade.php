@@ -1,8 +1,8 @@
 {{-- Users table shared by "Utilisateurs & rôles" and "Clients". $showReservations adds the bookings column. --}}
 @php
     $me = auth()->user();
-    $canUpdate = $me->hasPermission('utilisateurs.update');
-    $canDelete = $me->hasPermission('utilisateurs.delete');
+    // client accounts are managed with the Clients right, team accounts with the Utilisateurs right
+    $can = fn ($user, $action) => $me->hasPermission(($user->isadmin ? 'utilisateurs.' : 'clients.') . $action);
     $showReservations = $showReservations ?? false;
 @endphp
 
@@ -21,7 +21,7 @@
                     @else
                         <th>Accès</th>
                     @endif
-                    <th>Inscrit le</th>
+                    <th>{{ $showReservations ? 'Inscrit le' : 'Dernière connexion' }}</th>
                     <th class="text-end">Actions</th>
                 </tr>
             </thead>
@@ -30,15 +30,20 @@
                     @php
                         // Staff cannot edit other admin accounts (see UserController::ensureCanManage)
                         $manageable = ! $user->isadmin || $me->isSuperAdmin() || $user->is($me);
-                        $editUrl = $canUpdate && $manageable ? route('admin.users.edit', $user->id) : null;
-                        $deleteUrl = $canDelete && $manageable && ! $user->is($me) ? route('admin.users.destroy', $user->id) : null;
+                        $editUrl = match (true) {
+                            ! $user->isadmin => route('admin.clients.show', $user->id), // client page (read or edit)
+                            $can($user, 'update') && $manageable => route('admin.users.edit', $user->id),
+                            default => null,
+                        };
+                        // admin accounts are never deleted (UserController::destroy refuses): no useless button
+                        $deleteUrl = $can($user, 'delete') && ! $user->isadmin ? route('admin.users.destroy', $user->id) : null;
                     @endphp
                     <tr>
                         <td>
                             <div class="sa-person">
                                 <span class="sa-avatar">{{ mb_substr($user->name, 0, 2) }}</span>
                                 <div>
-                                    <div class="sa-strong">{{ $user->name }}</div>
+                                    <div class="sa-strong">{{ $user->name }} @if ($user->is($me))<span class="sa-chip muted ms-1">Vous</span>@endif</div>
                                     <div class="sa-sub">{{ $user->telephone ?: 'N° ' . $user->id }}</div>
                                 </div>
                             </div>
@@ -59,18 +64,24 @@
                             </td>
                         @else
                             <td>
-                                @forelse ($user->roles as $role)
-                                    <span class="sa-chip brand">{{ $role->name }}</span>
-                                @empty
-                                    @if ($user->isadmin)
-                                        <span class="sa-chip brand"><i class="bi bi-shield-check"></i> Super admin</span>
-                                    @else
-                                        <span class="sa-chip muted">Client</span>
-                                    @endif
-                                @endforelse
+                                @if ($user->societe_id)
+                                    <span class="sa-chip info"><i class="bi bi-buildings"></i> {{ $user->societe?->raison_social ?? 'Compagnie' }}</span>
+                                @elseif ($user->roles->isEmpty() && $user->isadmin)
+                                    <span class="sa-chip brand"><i class="bi bi-shield-check"></i> Super admin</span>
+                                @endif
+                                @foreach ($user->roles as $role)
+                                    <span class="sa-chip brand"><i class="bi bi-person-badge"></i> {{ $role->name }}</span>
+                                @endforeach
                             </td>
                         @endif
-                        <td class="sa-num sa-cell-muted">{{ $user->created_at?->format('d/m/Y') }}</td>
+                        @if ($showReservations)
+                            <td class="sa-num sa-cell-muted">{{ $user->created_at?->format('d/m/Y') }}</td>
+                        @else
+                            <td class="sa-num sa-cell-muted">
+                                {{ $user->derniere_connexion_le ? \Carbon\Carbon::parse($user->derniere_connexion_le)->format('d/m/Y H:i') : 'Jamais' }}
+                                @if ($user->derniere_connexion_appareil)<div class="sa-sub">{{ $user->derniere_connexion_appareil }}</div>@endif
+                            </td>
+                        @endif
                         <td class="text-end">
                             <x-admin.row-actions :edit="$editUrl" :delete="$deleteUrl" :confirm="'Supprimer le compte de ' . $user->name . ' ?'" />
                         </td>

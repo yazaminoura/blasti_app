@@ -19,12 +19,20 @@ class WhatsApp
     }
 
     /** https://wa.me/?text=... for one ticket or every ticket of an order (cancelled ones left out). */
-    public static function lien(Reservation|Collection $billets): string
+    public static function lien(Reservation|Collection $billets, ?string $telephone = null): string
+    {
+        $texte = self::texte($billets);
+
+        return $texte === '' ? 'https://wa.me/' : 'https://wa.me/' . self::numero($telephone) . '?text=' . rawurlencode($texte);
+    }
+
+    /** The message itself: trip, seats and a link to each ticket's PDF (also sent with the shared PDF file). */
+    public static function texte(Reservation|Collection $billets): string
     {
         $billets = ($billets instanceof Reservation ? collect([$billets]) : $billets)->reject->isCancelled()->values();
         $premier = $billets->first();
         if (! $premier) {
-            return 'https://wa.me/';
+            return '';
         }
         $d = $premier->departAt();
 
@@ -44,6 +52,20 @@ class WhatsApp
             $lignes[] = __('À payer au contrôleur : :montant DH', ['montant' => number_format($reste, 2, ',', ' ')]);
         }
 
-        return 'https://wa.me/?text=' . rawurlencode(implode("\n", $lignes));
+        return implode("\n", $lignes);
+    }
+
+    /** Moroccan number for wa.me: 06 12 34 56 78 -> 212612345678 ('' = WhatsApp asks for the contact). */
+    public static function numero(?string $telephone): string
+    {
+        $chiffres = preg_replace('/\D/', '', (string) $telephone);
+        if (str_starts_with($chiffres, '00')) {
+            $chiffres = substr($chiffres, 2);
+        }
+        if (strlen($chiffres) === 10 && str_starts_with($chiffres, '0')) {
+            $chiffres = '212' . substr($chiffres, 1);
+        }
+
+        return strlen($chiffres) >= 11 ? $chiffres : '';
     }
 }

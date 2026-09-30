@@ -66,7 +66,7 @@
                                             @elseif ($mode->en_agence)
                                                 {{ __('Vous recevez un code de paiement : payez :total en espèces dans un point de paiement (Wafacash, Cash Plus...) dans les :h heures. Sans paiement, les billets sont annulés.', ['total' => $dh($total), 'h' => config('safar.agence_delai_heures')]) }}
                                             @else
-                                                {{ __('Vos sièges sont réservés maintenant ; vous payez :total au contrôleur avant de monter.', ['total' => $dh($total)]) . (config('safar.confirmation.active') ? ' ' . __('Nous vous demanderons par e-mail de confirmer votre présence :h h avant le départ.', ['h' => config('safar.confirmation.demande_heures')]) : '') }}
+                                                {{ __('Vos sièges sont réservés maintenant ; vous payez :total au contrôleur avant de monter.', ['total' => $dh($total)]) . (config('safar.confirmation.active') ? ' ' . __('Nous vous enverrons un e-mail :h h après la réservation : payez ou confirmez votre présence, sinon les billets sont annulés. Si le bus part avant, vous payez au contrôleur.', ['h' => config('safar.confirmation.demande_heures')]) : '') }}
                                             @endif
                                         </span>
                                     </span>
@@ -75,7 +75,9 @@
                             @endforeach
                         </div>
 
-                        @if ($cashRefused)
+                        @if ($quotaAtteint)
+                            <div class="alert alert-warning fs-14 mt-3"><i class="isax isax-info-circle me-1"></i>{{ __('Vous avez déjà réservé :max fois sans payer ce mois-ci : merci de payer par carte. Le paiement plus tard revient le mois prochain.', ['max' => config('safar.non_payes_par_mois')]) }}</div>
+                        @elseif ($cashRefused)
                             <div class="alert alert-warning fs-14 mt-3"><i class="isax isax-info-circle me-1"></i>{{ __('Le paiement à l\'embarquement n\'est plus proposé sur votre compte après plusieurs billets non utilisés : merci de payer par carte.') }}</div>
                         @endif
 

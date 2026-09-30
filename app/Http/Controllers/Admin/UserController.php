@@ -13,13 +13,29 @@ class UserController extends Controller
      */
     public function index(Request $request)
     {
-        $users = User::with('roles')
+        // Back-office accounts only: clients have their own page (admin.clients.index)
+        $types = [
+            'super' => fn ($q) => $q->whereNull('societe_id')->whereDoesntHave('roles'),
+            'equipe' => fn ($q) => $q->whereNull('societe_id')->whereHas('roles'),
+            'compagnie' => fn ($q) => $q->whereNotNull('societe_id'),
+        ];
+        $type = array_key_exists((string) $request->type, $types) ? $request->type : null;
+
+        $counts = ['tous' => User::where('isadmin', 1)->count()];
+        foreach ($types as $key => $scope) {
+            $counts[$key] = $scope(User::where('isadmin', 1))->count();
+        }
+
+        $users = User::where('isadmin', 1)
+            ->with('roles', 'societe:id,raison_social')
+            ->when($type, fn ($query) => $types[$type]($query))
             ->when($request->filled('q'), fn ($query) => $this->search($query, $request->q))
             ->latest()
-            ->paginate(10)
+            ->paginate(15)
             ->withQueryString();
-        $roles = \App\Models\Role::withCount('users')->get();
-        return view('admin.users.index', compact('users', 'roles'));
+        $roles = \App\Models\Role::withCount(['users' => fn ($q) => $q->where('isadmin', 1)])->orderBy('name')->get();
+
+        return view('admin.users.index', compact('users', 'roles', 'counts', 'type'));
     }
 
     /**
@@ -43,6 +59,43 @@ class UserController extends Controller
             ->withQueryString();
 
         return view('admin.users.clients', compact('users'));
+    }
+
+    /** One client: identity, numbers and bookings. Team accounts are edited on the team page. */
+    public function showClient(User $user)
+    {
+        if ($user->isadmin) {
+            return redirect()->route('admin.users.edit', $user);
+        }
+
+        $reservations = $user->reservations()->withoutGlobalScope('active')
+            ->with('villeDepart', 'villeArrivee', 'modeReglement')
+            ->latest('id')
+            ->paginate(10);
+        $stats = [
+            'billets' => $user->reservations()->count(),
+            'payes' => $user->reservations()->whereNotNull('paye_le')->count(),
+            'non_payes' => $user->reservations()->whereNull('paye_le')->whereDate('date_depart', '>=', today())->count(),
+            'annules' => $user->reservations()->withoutGlobalScope('active')->where('statut', \App\Models\Reservation::ANNULEE)->count(),
+            'absences' => $user->absences(),
+        ];
+
+        return view('admin.users.client', compact('user', 'reservations', 'stats'));
+    }
+
+    /** Identity of a client only: the admin switch, role and company never appear here. */
+    public function updateClient(Request $request, User $user)
+    {
+        abort_if($user->isadmin, 404);
+
+        $data = $request->validate([
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'telephone' => 'nullable|string|max:30',
+        ]);
+        $user->update($data);
+
+        return back()->with('success', 'Client mis à jour.');
     }
 
     /**
@@ -97,6 +150,10 @@ class UserController extends Controller
      */
     public function edit(User $user)
     {
+        // a client has its own page; the super admin can still open this form to give admin access (?acces=1)
+        if (! $user->isadmin && ! (request()->boolean('acces') && auth()->user()->isSuperAdmin())) {
+            return redirect()->route('admin.clients.show', $user);
+        }
         $this->ensureCanManage($user);
 
         $roles = \App\Models\Role::all();
@@ -145,6 +202,17 @@ class UserController extends Controller
         }
 
         return redirect()->route('admin.users.index')->with('success', 'Utilisateur mis à jour avec succès.');
+    }
+
+    /** Super admin: log this team account out of every browser (lost tablet, staff member leaving...). */
+    public function deconnecter(User $user)
+    {
+        abort_unless(auth()->user()->isSuperAdmin(), 403, 'Seul le super administrateur peut déconnecter un compte.');
+        abort_if($user->is(auth()->user()), 403, 'Utilisez « Déconnexion » pour votre propre compte.');
+
+        \App\Support\SessionUnique::deconnecterPartout($user);
+
+        return back()->with('success', $user->name . ' est déconnecté de tous ses appareils.');
     }
 
     /**

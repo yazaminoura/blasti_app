@@ -6,6 +6,33 @@
                      :backLabel="$user->isadmin ? 'Utilisateurs & rôles' : 'Clients'" />
 
 <div class="sa-gap">
+    @if ($user->isadmin)
+        @php
+            $limite = \App\Support\SessionUnique::limite($user);
+            $enLigne = \App\Support\SessionUnique::enLigne($user);
+        @endphp
+        <x-admin.card title="Connexion" icon="bi-laptop"
+            :subtitle="$limite ? 'Ce compte ne peut être ouvert qu\'à un seul endroit à la fois : une nouvelle connexion ferme l\'ancienne.' : 'Super administrateur : pas de limite de connexions.'">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex flex-wrap gap-4">
+                    <div><div class="sa-sub">État</div>
+                        <span class="sa-chip {{ $enLigne ? 'success' : 'muted' }} dot">{{ $enLigne ? 'Connecté' : 'Hors ligne' }}</span></div>
+                    <div><div class="sa-sub">Dernière connexion</div>
+                        <div class="sa-strong">{{ $user->derniere_connexion_le ? \Carbon\Carbon::parse($user->derniere_connexion_le)->format('d/m/Y H:i') : 'Jamais' }}</div></div>
+                    <div><div class="sa-sub">Appareil</div><div class="sa-strong">{{ $user->derniere_connexion_appareil ?? '—' }}</div></div>
+                    <div><div class="sa-sub">Adresse IP</div><div class="sa-strong sa-mono">{{ $user->derniere_connexion_ip ?? '—' }}</div></div>
+                </div>
+                @if (auth()->user()->isSuperAdmin() && ! $user->is(auth()->user()))
+                    <form method="POST" action="{{ route('admin.users.deconnecter', $user) }}" onsubmit="confirmDelete(event, this)"
+                          data-confirm="Déconnecter {{ $user->name }} de tous ses appareils ?" data-confirm-text="Il devra se reconnecter avec son mot de passe." data-confirm-button="Oui, déconnecter">
+                        @csrf
+                        <button class="btn btn-soft text-danger"><i class="bi bi-box-arrow-right"></i> Déconnecter partout</button>
+                    </form>
+                @endif
+            </div>
+        </x-admin.card>
+    @endif
+
     <x-admin.form :action="route('admin.users.update', $user->id)" method="PUT" :cancel="$user->isadmin ? route('admin.users.index') : route('admin.clients.index')">
         <x-admin.form-section title="Identité" icon="bi-person">
             <x-admin.field name="name" label="Nom complet" col="col-md-6" required :value="$user->name" />

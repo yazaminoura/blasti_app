@@ -49,6 +49,18 @@
         if (e.key === 'Escape') openSidebar(false);
     });
 
+    // ---- Clickable rows: a click on a list row opens its form (edit first, else detail) ----------
+    document.addEventListener('click', function (e) {
+        if (e.defaultPrevented || e.button !== 0) return;
+        var row = e.target.closest('.sa-table tbody tr, [data-sa-row]');
+        if (!row || e.target.closest('a, button, input, select, textarea, label, form, [data-sa-no-row]')) return;
+        if (String(window.getSelection && window.getSelection()).length) return; // user is selecting text
+        var link = row.querySelector('[data-sa-row-link="edit"]') || row.querySelector('[data-sa-row-link]');
+        if (!link) return;
+        if (e.ctrlKey || e.metaKey) window.open(link.href, '_blank');
+        else window.location.href = link.href;
+    });
+
     // ---- Image upload preview -----------------------------------------------------
     document.addEventListener('change', function (e) {
         var input = e.target;

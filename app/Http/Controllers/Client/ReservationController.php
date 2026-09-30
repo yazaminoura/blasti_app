@@ -115,11 +115,12 @@ class ReservationController extends Controller
         $seats = $panier['seats'];
         $modes = self::availableModes($request->user());
         $cashRefused = ! $request->user()->mayPayAtBoarding();
+        $quotaAtteint = ! $request->user()->mayBookUnpaid();
         // return trip of an outbound order: discount shown now, applied when booking
         $retourDe = Reservation::retourValide($panier['retour_de'] ?? null, $request->user(), $depart);
         $remiseRetour = $retourDe ? round($prix * count($seats) * (float) config('safar.remise_retour_pourcent') / 100, 2) : 0.0;
 
-        return view('client.reservations.paiement', compact('voyage', 'depart', 'arrivee', 'prix', 'seats', 'modes', 'cashRefused', 'retourDe', 'remiseRetour'));
+        return view('client.reservations.paiement', compact('voyage', 'depart', 'arrivee', 'prix', 'seats', 'modes', 'cashRefused', 'quotaAtteint', 'retourDe', 'remiseRetour'));
     }
 
     /** Payment page "Appliquer": checks a promo code on the current cart (the booking checks it again). */
@@ -276,9 +277,8 @@ class ReservationController extends Controller
                     'voyage_id'         => $voyage->id,
                     'arret_depart_id'   => $depart->id,
                     'arret_arrivee_id'  => $arrivee->id,
-                    // unpaid and leaving soon: no "confirm you are coming" e-mail, the client just booked
                     // agency payment has its own deadline (reservations:agence): no presence e-mail either
-                    'presence_confirmee_le' => ! $online && ($agence || $depart->passage_at->lte(now()->addHours((int) config('safar.confirmation.demande_heures')))) ? now() : null,
+                    'presence_confirmee_le' => ! $online && $agence ? now() : null,
                 ]));
             });
         } catch (\DomainException $e) {
@@ -313,7 +313,7 @@ class ReservationController extends Controller
 
         // staff opening the QR link with their phone camera: the scan counts like one from the scanner page
         $user = auth()->user();
-        $controleur = $user?->isadmin && $user->hasPermission('reservations.read')
+        $controleur = $user?->isadmin && ($user->hasPermission('reservations.read') || $user->hasPermission('scanner.use'))
             && (! $user->societe_id || $reservation->autocar?->societe_id === $user->societe_id);
         if ($controleur) {
             \App\Support\Controle::noter($reservation, $user);
@@ -420,10 +420,12 @@ class ReservationController extends Controller
     {
         // too many no-shows (config safar.absences_max): "pay at boarding" is no longer offered, card only
         $cashAllowed = ! $user || $user->mayPayAtBoarding();
+        // monthly quota of orders booked without paying (config safar.non_payes_par_mois): then card only
+        $unpaidAllowed = ! $user || $user->mayBookUnpaid();
 
         return ModeReglement::orderBy('mode_reglement')->get()
             // agency payment is paid before the trip: still offered after no-shows
-            ->filter(fn ($mode) => $mode->en_ligne ? Cmi::available() : ($mode->en_agence || $cashAllowed))
+            ->filter(fn ($mode) => $mode->en_ligne ? Cmi::available() : ($unpaidAllowed && ($mode->en_agence || $cashAllowed)))
             ->values();
     }
 
@@ -437,7 +439,7 @@ class ReservationController extends Controller
             ->findOrFail($id);
 
         $user = auth()->user();
-        abort_unless($reservation->user_id === $user->id || ($user->isadmin && $user->hasPermission('reservations.read')), 403);
+        abort_unless($reservation->user_id === $user->id || ($user->isadmin && ($user->hasPermission('reservations.read') || $user->hasPermission('scanner.use'))), 403);
 
         return $reservation;
     }

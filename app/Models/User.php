@@ -113,6 +113,24 @@ class User extends Authenticatable implements MustVerifyEmail
             ->count();
     }
 
+    /** Orders booked this calendar month without paying online (cancelled ones count too: no reset by cancelling). */
+    public function commandesNonPayeesCeMois(): int
+    {
+        return $this->reservations()->withoutGlobalScope('active')
+            ->where('created_at', '>=', now()->startOfMonth())
+            ->whereNull('vendu_par') // sold (and paid) at the counter
+            ->whereHas('modeReglement', fn ($q) => $q->where('en_ligne', false))
+            ->distinct()->count('commande');
+    }
+
+    /** Booking without paying is allowed config('safar.non_payes_par_mois') times per month, then card only. */
+    public function mayBookUnpaid(): bool
+    {
+        $max = (int) config('safar.non_payes_par_mois');
+
+        return $max <= 0 || $this->commandesNonPayeesCeMois() < $max;
+    }
+
     /** "Pay at boarding" is refused after too many no-shows (config safar.absences_max): card only. */
     public function mayPayAtBoarding(): bool
     {

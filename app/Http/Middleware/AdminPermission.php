@@ -15,9 +15,9 @@ class AdminPermission
     /** Route name prefix => permission service (same names as the role form). */
     private const SERVICES = [
         'admin.users.'           => 'utilisateurs',
-        'admin.clients.'         => 'utilisateurs',
+        'admin.clients.'         => 'clients',
         'admin.roles.'           => 'roles',
-        'admin.export.users'     => 'utilisateurs',
+        'admin.export.users'     => 'clients',
         'admin.export.'          => null, // resolved from the last segment below
         'villes.'                => 'villes',
         'type_voyages.'          => 'type voyages',
@@ -33,6 +33,29 @@ class AdminPermission
         'avis.'                  => 'avis',
         'admin.statistiques'     => 'statistiques',
         'autocaroptions.'        => 'options',
+    ];
+
+    /** Routes with their own right (special rights of App\Support\Droits); a list = any of them is enough. */
+    private const ROUTES = [
+        'reservation.admin.rembourser' => 'reservations.rembourser',
+        'admin.alertes'                => 'finance.read',
+        // counter sales (Guichet): selling = creating bookings
+        'reservation.admin.guichet'         => 'reservations.create',
+        'reservation.admin.guichet.vendre'  => 'reservations.create',
+        'reservation.admin.guichet.vente'   => 'reservations.read',
+        'reservation.admin.guichet.pdf'     => 'reservations.read',
+        'reservation.admin.guichet.imprimer' => 'reservations.read',
+        'reservation.admin.guichet.passager' => 'reservations.update',
+        'admin.users.deconnecter'      => 'utilisateurs.update', // + super admin only (UserController::deconnecter)
+        'reservation.admin.scanner'    => 'scanner.use',
+        'reservation.admin.scan'       => 'scanner.use',
+        'reservation.admin.embarquer'  => 'scanner.use',
+        // cash is taken at the counter (bookings) or at the bus door (scanner)
+        'reservation.admin.payer'      => ['reservations.update', 'scanner.use'],
+        'voyages.passagers'            => ['voyages.read', 'scanner.use'],
+        // staff can only create client accounts (UserController::store), so the Clients right is enough
+        'admin.users.create'           => ['utilisateurs.create', 'clients.create'],
+        'admin.users.store'            => ['utilisateurs.create', 'clients.create'],
     ];
 
     /** Last segment of the route name => permission action. */
@@ -51,7 +74,8 @@ class AdminPermission
         'voyages.read'      => 'voyages.index',
         'autocars.read'     => 'autocars.index',
         'societes.read'     => 'societes.index',
-        'utilisateurs.read' => 'admin.clients.index',
+        'clients.read'      => 'admin.clients.index',
+        'scanner.use'       => 'reservation.admin.scanner',
         'villes.read'       => 'villes.index',
     ];
 
@@ -73,10 +97,17 @@ class AdminPermission
             abort(403, "Seul le super administrateur peut modifier l'apparence.");
         }
 
-        $permission = self::permissionFor($routeName);
+        $cible = $request->route('user');
+        if ($cible !== null && ! $cible instanceof \App\Models\User) {
+            $cible = \App\Models\User::find($cible); // route parameter not bound yet
+        }
+        $permission = self::permissionFor($routeName, $cible);
 
         // A page with no permission mapped is reserved to the super admin (fail closed for new routes)
-        if ($permission === null ? $user->isSuperAdmin() : $user->hasPermission($permission)) {
+        $allowed = $permission === null
+            ? $user->isSuperAdmin()
+            : collect((array) $permission)->contains(fn ($p) => $user->hasPermission($p));
+        if ($allowed) {
             return $next($request);
         }
 
@@ -92,10 +123,20 @@ class AdminPermission
         abort(403, "Vous n'avez pas la permission d'accéder à cette page.");
     }
 
-    public static function permissionFor(string $routeName): ?string
+    /** @return string|string[]|null  null = super admin only; a list = any of these rights */
+    public static function permissionFor(string $routeName, mixed $cible = null): string|array|null
     {
         if ($routeName === 'admin') {
             return 'dashboard.read';
+        }
+        if (isset(self::ROUTES[$routeName])) {
+            return self::ROUTES[$routeName];
+        }
+        // editing a client account needs the Clients right, a team account the Utilisateurs right
+        if ($cible instanceof \App\Models\User && ! $cible->isadmin && str_starts_with($routeName, 'admin.users.')) {
+            $segment = substr($routeName, strrpos($routeName, '.') + 1);
+
+            return 'clients.' . (self::ACTIONS[$segment] ?? 'read');
         }
 
         foreach (self::SERVICES as $prefix => $service) {

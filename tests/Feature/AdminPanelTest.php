@@ -59,7 +59,7 @@ class AdminPanelTest extends TestCase
     {
         $role = Role::create(['name' => 'Agent', 'slug' => 'agent']);
         foreach ($permissions as $name) {
-            $role->permissions()->attach(Permission::create(['name' => $name, 'slug' => str_replace([' ', '.'], '-', $name)]));
+            $role->permissions()->attach(Permission::firstOrCreate(['name' => $name], ['slug' => str_replace([' ', '.'], '-', $name)]));
         }
         $staff = User::factory()->create(['isadmin' => 1]);
         $staff->roles()->attach($role);

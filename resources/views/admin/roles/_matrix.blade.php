@@ -42,6 +42,21 @@
             </table>
         </div>
     </div>
+
+    {{-- rights that are not a whole section (App\Support\Droits::SPECIAUX) --}}
+    <div class="row g-2">
+        @foreach ($speciaux ?? [] as $perm => [$label, $explication])
+            <div class="col-md-4">
+                <label class="sa-kpi-mini h-100 justify-content-start align-items-start gap-2" style="cursor: pointer;">
+                    <input class="form-check-input perm-checkbox mt-1 flex-shrink-0" type="checkbox" name="permissions[]" value="{{ $perm }}" @checked(in_array($perm, $checked, true))>
+                    <span>
+                        <span class="sa-strong d-block">{{ $label }}</span>
+                        <span class="sa-sub">{{ $explication }}</span>
+                    </span>
+                </label>
+            </div>
+        @endforeach
+    </div>
 </div>
 
 @push('scripts')

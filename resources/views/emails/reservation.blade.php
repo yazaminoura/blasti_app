@@ -8,8 +8,18 @@
         'rappel' => [__('Votre départ, c\'est demain'), __('Petit rappel : votre bus part demain. Présentez-vous au moins 15 minutes avant le départ avec votre billet (en pièce jointe).')],
         'annulee' => [__('Votre billet a été annulé'), __('Votre réservation a bien été annulée et le siège a été libéré.') . ($r->needsRefund() ? ' ' . __('Remboursement prévu : :montant DH (frais d\'annulation : :frais DH). Notre équipe le traite rapidement.', ['montant' => number_format($r->amountToRefund(), 2, ',', ' '), 'frais' => number_format((float) $r->frais_annulation, 2, ',', ' ')]) : '')],
         'avis' => [__('Comment s\'est passé votre voyage ?'), __('Merci d\'avoir voyagé avec nous ! Votre avis sur la compagnie (ponctualité, confort, accueil) aide les autres voyageurs à choisir. Cela prend 30 secondes.')],
-        'presence' => [__('Confirmez que vous voyagez'), __('Votre billet n\'est pas encore payé (paiement à l\'embarquement). Pour garder votre siège, confirmez que vous serez bien là en cliquant sur le bouton ci-dessous avant le :date à :heure. Sans confirmation, le billet sera annulé et le siège remis en vente.', ['date' => $r->presenceDeadline()->translatedFormat('d M'), 'heure' => $r->presenceDeadline()->format('H:i')])],
-        'sans_confirmation' => [__('Votre billet a été annulé'), __('Vous n\'avez pas confirmé votre présence à temps : ce billet non payé a été annulé et le siège remis en vente. Vous pouvez réserver à nouveau si des places sont libres.')],
+        'presence' => [__('Confirmez que vous voyagez'), __('Votre billet n\'est pas encore payé. Payez-le ou confirmez que vous voyagez avant le :date à :heure, sinon il sera annulé et le siège remis en vente. Si vous confirmez, vous avez jusqu\'au :date2 à :heure2 pour payer. Si votre bus part avant, vous payez au contrôleur.', ['date' => $r->presenceDeadline()->translatedFormat('d M'), 'heure' => $r->presenceDeadline()->format('H:i'), 'date2' => $r->paymentDeadline()->translatedFormat('d M'), 'heure2' => $r->paymentDeadline()->format('H:i')])],
+        'paiement' => (function () use ($r) {
+            $e = $r->encaissements()->with('user')->first(); // latest payment
+            return [__('Paiement reçu'), __('Nous avons bien reçu :montant DH (:mode) pour ce billet, le :date à :heure, encaissés par :nom. Gardez ce message : c\'est votre reçu.', [
+                'montant' => number_format((float) $e?->montant, 2, ',', ' '),
+                'mode' => __(\App\Models\Encaissement::MODES[$e?->mode] ?? '—'),
+                'date' => $e?->created_at?->format('d/m/Y'),
+                'heure' => $e?->created_at?->format('H:i'),
+                'nom' => $e?->user?->name ?? '—',
+            ])];
+        })(),
+        'sans_confirmation' => [__('Votre billet a été annulé'), __('Ce billet n\'a pas été payé à temps : il a été annulé et le siège remis en vente. Vous pouvez réserver à nouveau si des places sont libres.')],
         'modifiee' => [__('Votre billet a été modifié'), __('Votre billet a bien été déplacé sur le départ ci-dessous. Votre nouveau billet est en pièce jointe : l\'ancien n\'est plus valable.') . ($r->isPaid() && $r->resteAPayer() > 0 ? ' ' . __('Supplément à régler à l\'embarquement : :montant DH.', ['montant' => number_format($r->resteAPayer(), 2, ',', ' ')]) : '')],
         default => $billets->count() > 1
             ? [__('Vos billets sont confirmés'), __('Merci pour votre réservation ! Vos billets sont en pièce jointe (une page et un QR code par siège) : présentez-les à l\'embarquement, sur votre téléphone ou imprimés.')]

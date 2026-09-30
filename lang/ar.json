@@ -856,5 +856,18 @@
     "Pas pour ce départ": "ليست لهذا الانطلاق",
     "Ce billet est pour le :quand.": "هذه التذكرة ليوم :quand.",
     "À encaisser : :montant DH": "المبلغ المطلوب: :montant درهم",
-    "Siège :siege": "المقعد :siege"
+    "Siège :siege": "المقعد :siege",
+    "Reçu : paiement du billet #:id | :brand": "إيصال: أداء التذكرة رقم :id | :brand",
+    "Paiement reçu": "تم استلام الأداء",
+    "Nous avons bien reçu :montant DH (:mode) pour ce billet, le :date à :heure, encaissés par :nom. Gardez ce message : c'est votre reçu.": "توصلنا بمبلغ :montant درهم (:mode) عن هذه التذكرة يوم :date على الساعة :heure، استلمه :nom. احتفظ بهذه الرسالة: إنها إيصالك.",
+    "Vérifié en scannant le QR code. Vous payez au guichet ou à bord ? Vous recevez un reçu par e-mail : pas de reçu = signalez-le au :telephone.": "يتم التحقق بمسح رمز QR. تؤدي في الشباك أو في الحافلة؟ ستتوصل بإيصال عبر البريد الإلكتروني: بدون إيصال = بلّغ على :telephone.",
+    "Vous avez déjà réservé :max fois sans payer ce mois-ci : merci de payer par carte. Le paiement plus tard revient le mois prochain.": "لقد حجزت :max مرات بدون أداء هذا الشهر: المرجو الأداء بالبطاقة. سيعود خيار الأداء لاحقاً في الشهر المقبل.",
+    "Votre billet n'est pas encore payé. Payez-le ou confirmez que vous voyagez avant le :date à :heure, sinon il sera annulé et le siège remis en vente. Si vous confirmez, vous avez jusqu'au :date2 à :heure2 pour payer. Si votre bus part avant, vous payez au contrôleur.": "تذكرتك لم تُؤدَّ بعد. أدِّها أو أكّد أنك مسافر قبل :date على الساعة :heure، وإلا ستُلغى ويُعاد المقعد للبيع. إذا أكدت، لديك حتى :date2 على الساعة :heure2 للأداء. إذا انطلقت حافلتك قبل ذلك، تؤدي للمراقب.",
+    "Ce billet n'a pas été payé à temps : il a été annulé et le siège remis en vente. Vous pouvez réserver à nouveau si des places sont libres.": "لم تُؤدَّ هذه التذكرة في الوقت: تم إلغاؤها وإعادة المقعد للبيع. يمكنك الحجز من جديد إذا كانت هناك مقاعد متاحة.",
+    "Billet #:id annulé (non payé à temps) | :brand": "تم إلغاء التذكرة رقم :id (لم تُؤدَّ في الوقت) | :brand",
+    "Votre présence est confirmée. Payez :montant avant le :date à :heure, sinon le billet sera annulé. Si votre bus part avant, payez au contrôleur avant de monter.": "تم تأكيد حضورك. أدِّ :montant قبل :date على الساعة :heure، وإلا ستُلغى التذكرة. إذا انطلقت حافلتك قبل ذلك، أدِّ للمراقب قبل الصعود.",
+    "Payez ou confirmez votre présence avant le :date à :heure, sinon ce billet non payé sera annulé.": "أدِّ أو أكّد حضورك قبل :date على الساعة :heure، وإلا ستُلغى هذه التذكرة غير المؤداة.",
+    "Payez ce billet avant le :date à :heure, sinon il sera annulé.": "أدِّ هذه التذكرة قبل :date على الساعة :heure، وإلا ستُلغى.",
+    "Nous vous enverrons un e-mail :h h après la réservation : payez ou confirmez votre présence, sinon les billets sont annulés. Si le bus part avant, vous payez au contrôleur.": "سنرسل لك بريداً إلكترونياً بعد :h ساعة من الحجز: أدِّ أو أكّد حضورك، وإلا ستُلغى التذاكر. إذا انطلقت الحافلة قبل ذلك، تؤدي للمراقب.",
+    "Billet non payé : :h heures après la réservation, le client reçoit un e-mail. Sans paiement ni confirmation :l heures plus tard, le billet est annulé sans frais. S'il confirme sa présence, il doit payer dans les :p heures suivant l'e-mail. Un bus qui part avant ces délais se paie au contrôleur.": "تذكرة غير مؤداة: بعد :h ساعة من الحجز، يتوصل الزبون ببريد إلكتروني. بدون أداء أو تأكيد بعد :l ساعة، تُلغى التذكرة بدون مصاريف. إذا أكد حضوره، يجب عليه الأداء خلال :p ساعة من البريد. الحافلة التي تنطلق قبل هذه الآجال تُؤدّى للمراقب."
 }

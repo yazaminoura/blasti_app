@@ -155,12 +155,18 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
         Route::get('/admin/clients', [UserController::class, 'clients'])->name('admin.clients.index');
+        // one client: details, bookings, identity + password (never admin access: that is on the team page)
+        Route::get('/admin/clients/{user}', [UserController::class, 'showClient'])->whereNumber('user')->name('admin.clients.show');
+        Route::put('/admin/clients/{user}', [UserController::class, 'updateClient'])->whereNumber('user')->name('admin.clients.update');
+        Route::put('/admin/clients/{user}/password', [UserController::class, 'updatePassword'])->whereNumber('user')->name('admin.clients.update-password');
         Route::get('/admin/users/create', [UserController::class, 'create'])->name('admin.users.create');
         Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
         Route::get('/admin/users/{user}/edit', [UserController::class, 'edit'])->name('admin.users.edit');
         Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
         Route::put('/admin/users/{user}/password', [UserController::class, 'updatePassword'])->name('admin.users.update-password');
         Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
+        // super admin: log a team account out of every browser
+        Route::post('/admin/users/{user}/deconnecter', [UserController::class, 'deconnecter'])->name('admin.users.deconnecter');
 
         Route::get('/admin/roles/create', [RoleController::class, 'create'])->name('admin.roles.create');
         Route::post('/admin/roles', [RoleController::class, 'store'])->name('admin.roles.store');
@@ -180,6 +186,8 @@ Route::middleware('auth')->group(function () {
         Route::resource('options', OptionController::class)->except('show');
         Route::resource('equipements', EquipementController::class)->except('show');
         Route::resource('promotions', \App\Http\Controllers\Admin\PromotionController::class)->except('show');
+        // red flags of the bus door: scanned "to pay", never paid nor boarded
+        Route::get('/admin/alertes', [\App\Http\Controllers\Admin\AlertesController::class, 'index'])->name('admin.alertes');
         // sales dashboard (by company, route, month)
         Route::get('/admin/statistiques', [\App\Http\Controllers\Admin\StatistiquesController::class, 'index'])->name('admin.statistiques');
         // reviews moderation
@@ -189,6 +197,15 @@ Route::middleware('auth')->group(function () {
 
         // Réservations admin
         Route::get('/reservation/admin/list', [ReservationController::class, 'indexAdmin'])->name('reservation.admin.index');
+        // counter sales: pick the departure and the seats, the traveller, take the money, hand the tickets
+        Route::get('/admin/guichet', [\App\Http\Controllers\Admin\GuichetController::class, 'index'])->name('reservation.admin.guichet');
+        Route::post('/admin/guichet', [\App\Http\Controllers\Admin\GuichetController::class, 'store'])->name('reservation.admin.guichet.vendre');
+        Route::get('/admin/guichet/vente/{commande}', [\App\Http\Controllers\Admin\GuichetController::class, 'vente'])->name('reservation.admin.guichet.vente');
+        Route::get('/admin/guichet/vente/{commande}/billets.pdf', [\App\Http\Controllers\Admin\GuichetController::class, 'pdf'])->name('reservation.admin.guichet.pdf');
+        // receipt printer (80 / 58 mm roll) or any printer: one small ticket per seat
+        Route::get('/admin/guichet/vente/{commande}/imprimer', [\App\Http\Controllers\Admin\GuichetController::class, 'imprimer'])->name('reservation.admin.guichet.imprimer');
+        // fix the passenger name typed at the counter (typo)
+        Route::patch('/admin/guichet/billet/{reservation}/passager', [\App\Http\Controllers\Admin\GuichetController::class, 'passager'])->name('reservation.admin.guichet.passager');
         Route::get('/reservation/admin/scanner', [ReservationController::class, 'scanner'])->name('reservation.admin.scanner');
         // one ticket checked from the scanner page (JSON): logged in the scans table
         Route::post('/reservation/admin/scanner', [ReservationController::class, 'scan'])->middleware('throttle:120,1')->name('reservation.admin.scan');

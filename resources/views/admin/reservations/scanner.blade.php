@@ -26,7 +26,7 @@
         </div>
         <div class="col-md-4">
             @if ($bus)
-                <a href="{{ route('voyages.passagers', $bus) }}" class="btn btn-light w-100"><i class="bi bi-people"></i> Liste des passagers</a>
+                <a href="{{ route('voyages.passagers', $bus) }}" class="btn btn-primary w-100"><i class="bi bi-people"></i> Passagers du bus</a>
             @else
                 <div class="sa-sub">Choisissez le bus pour refuser les billets d'un autre départ.</div>
             @endif

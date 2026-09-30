@@ -80,9 +80,11 @@
     <div class="col-sm-6">
         <x-admin.stat label="Réservations trouvées" :value="number_format($totals['count'], 0, ',', ' ')" icon="bi-ticket-perforated" />
     </div>
-    <div class="col-sm-6">
-        <x-admin.stat label="Chiffre d'affaires (après remises)" :value="number_format($totals['revenue'], 2, ',', ' ') . ' DH'" icon="bi-cash-stack" tone="success" />
-    </div>
+    @if (auth()->user()->hasPermission('finance.read'))
+        <div class="col-sm-6">
+            <x-admin.stat label="Chiffre d'affaires (après remises)" :value="number_format($totals['revenue'], 2, ',', ' ') . ' DH'" icon="bi-cash-stack" tone="success" />
+        </div>
+    @endif
 </div>
 
 <x-admin.card flush>

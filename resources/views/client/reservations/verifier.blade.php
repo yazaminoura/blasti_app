@@ -34,7 +34,7 @@
                             @endif
 
                             {{-- controller at the bus door (back-office account with the "réservations" permission) --}}
-                            @if ($controleur && auth()->user()->hasPermission('reservations.update') && ! $r->isCancelled() && $r->statut !== \App\Models\Reservation::EN_ATTENTE)
+                            @if ($controleur && (auth()->user()->hasPermission('reservations.update') || auth()->user()->hasPermission('scanner.use')) && ! $r->isCancelled() && $r->statut !== \App\Models\Reservation::EN_ATTENTE)
                                 <div class="bl-staff-panel mb-4">
                                     <div class="fs-12 text-uppercase text-muted mb-2"><i class="isax isax-security-user me-1"></i>{{ __('Contrôleur') }}</div>
                                     @if ($r->isBoarded())

@@ -46,13 +46,24 @@
     @endif
 @endif
 
+@if ($me->hasPermission('finance.read') && ($nbAlertes = \App\Http\Controllers\Admin\AlertesController::query(7)->count()))
+    <div class="alert d-flex align-items-center gap-2 border-0 mb-4" style="background: var(--sa-danger-soft); color: var(--sa-danger);">
+        <i class="bi bi-exclamation-triangle"></i>
+        <div class="flex-grow-1">{{ $nbAlertes }} billet(s) scanné(s) « À encaisser » cette semaine, jamais payé(s) ni monté(s).</div>
+        <a href="{{ route('admin.alertes', ['jours' => 7]) }}" class="fw-semibold" style="color: inherit;">Voir les alertes</a>
+    </div>
+@endif
+
 {{-- KPIs --}}
 <div class="row g-3 mb-4">
+    {{-- revenue: only with the "Voir le chiffre d'affaires" right --}}
+    @if ($me->hasPermission('finance.read'))
     <div class="col-xl-3 col-sm-6">
         <x-admin.stat label="Chiffre d'affaires" :value="number_format($totalRevenue, 0, ',', ' ') . ' DH'" icon="bi-cash-stack" tone="success">
             <x-admin.trend :value="$revenueTrend" /> · ce mois {{ number_format($revenueThisMonth, 0, ',', ' ') }} DH
         </x-admin.stat>
     </div>
+    @endif
     <div class="col-xl-3 col-sm-6">
         <x-admin.stat label="Réservations" :value="number_format($totalReservations, 0, ',', ' ')" icon="bi-ticket-perforated">
             <x-admin.trend :value="$reservationsTrend" />

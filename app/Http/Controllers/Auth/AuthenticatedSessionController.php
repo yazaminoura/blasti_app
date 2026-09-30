@@ -31,6 +31,8 @@ class AuthenticatedSessionController extends Controller
 
         $request->session()->regenerate();
         $user = Auth::user();
+        // team account: this browser becomes its only open session; last login kept for the admin
+        \App\Support\SessionUnique::demarrer($user, $request);
 
         // signed in from the popup: back to the page the client was on (seat map, voyage list...)
         if ($retour = RetourUrl::from($request)) {

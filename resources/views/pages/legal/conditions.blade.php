@@ -31,7 +31,7 @@
                     <li>{{ __('Paiement par carte bancaire en ligne, sur la page sécurisée du Centre Monétique Interbancaire (CMI), quand ce mode est proposé : :site ne reçoit ni ne conserve jamais les données de votre carte.', ['site' => $nom]) }}</li>
                     <li>{{ __('Paiement à l\'embarquement : le billet est réservé mais n\'est pas payé ; le montant est réglé au contrôleur avant de monter. Un même compte ne peut détenir plus de :max sièges non payés sur ses prochains voyages.', ['max' => config('safar.max_non_payes')]) }}</li>
                     @if ($conf['active'])
-                        <li>{{ __('Pour un billet non payé, le client reçoit :h heures avant le départ un e-mail lui demandant de confirmer sa présence. Sans confirmation :l heures avant le départ, le billet est annulé sans frais et le siège remis en vente.', ['h' => $conf['demande_heures'], 'l' => $conf['limite_heures']]) }}</li>
+                        <li>{{ __('Billet non payé : :h heures après la réservation, le client reçoit un e-mail. Sans paiement ni confirmation :l heures plus tard, le billet est annulé sans frais. S\'il confirme sa présence, il doit payer dans les :p heures suivant l\'e-mail. Un bus qui part avant ces délais se paie au contrôleur.', ['h' => $conf['demande_heures'], 'l' => $conf['limite_heures'], 'p' => $conf['paiement_heures']]) }}</li>
                     @endif
                 </ul>
 

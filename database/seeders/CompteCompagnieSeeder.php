@@ -21,15 +21,6 @@ class CompteCompagnieSeeder extends Seeder
 {
     public const EMAIL = 'compagnie@blasti.ma';
 
-    /** What a transport company may do in its own space (same names as the role grid). */
-    public const PERMISSIONS = [
-        'dashboard.read',
-        'reservations.read', 'reservations.update',
-        'voyages.read', 'voyages.create', 'voyages.update', 'voyages.delete',
-        'autocars.read', 'autocars.create', 'autocars.update',
-        'avis.read',
-    ];
-
     public function run(): void
     {
         $societe = Societe::orderBy('id')->first();
@@ -37,8 +28,10 @@ class CompteCompagnieSeeder extends Seeder
             return;
         }
 
-        $role = Role::firstOrCreate(['slug' => 'compagnie'], ['name' => 'Compagnie']);
-        $role->permissions()->sync(collect(self::PERMISSIONS)->map(
+        // "Compagnie – Responsable" (App\Support\Droits::roles())
+        [$nom, $droits] = \App\Support\Droits::roles()['compagnie'];
+        $role = Role::firstOrCreate(['slug' => 'compagnie'], ['name' => $nom]);
+        $role->permissions()->syncWithoutDetaching(collect($droits)->map(
             fn ($name) => Permission::firstOrCreate(['name' => $name], ['slug' => Str::slug($name)])->id
         ));
 
