@@ -88,10 +88,13 @@ class Reservation extends Model
         return ! $this->isCancelled() && $this->arriveeAt()->isPast() && ! $this->avis()->exists();
     }
 
-    /** A client may cancel until the boarding time, never after (the admin can cancel anytime). */
+    /**
+     * A client may cancel until the boarding time, never after, and never once the controller let them in
+     * (boarding opens hours before departure). The admin can cancel anytime.
+     */
     public function canBeCancelledByClient(): bool
     {
-        return ! $this->isCancelled() && $this->departAt()->isFuture();
+        return ! $this->isCancelled() && ! $this->isBoarded() && $this->departAt()->isFuture();
     }
 
     /**
@@ -124,18 +127,42 @@ class Reservation extends Model
     }
 
     /**
-     * Return-trip discount: $commande is an outbound order of this client, not cancelled, going the other way
-     * (its arrival city is where this trip starts) and leaving before $depart. Returns the order code or null.
+     * Return-trip discount: $commande is a confirmed outbound order of this client, not cancelled, making the
+     * opposite trip (B→A after A→B), leaving before $depart and not already used for another return.
+     * It covers at most as many seats as the outbound order has. Returns [order code|null, discount].
      */
-    public static function retourValide(?string $commande, ?User $user, VoyageArret $depart): ?string
+    public static function remiseRetour(?string $commande, ?User $user, VoyageArret $depart, VoyageArret $arrivee, float $prix, int $seats): array
     {
-        if (! $commande || ! $user || (float) config('safar.remise_retour_pourcent') <= 0) {
-            return null;
+        $pourcent = (float) config('safar.remise_retour_pourcent');
+        if (! $commande || ! $user || $pourcent <= 0) {
+            return [null, 0.0];
         }
-        $aller = static::where('commande', $commande)->where('user_id', $user->id)->first();
+        $aller = static::where('commande', $commande)->where('user_id', $user->id)->where('statut', self::CONFIRMEE)->get();
+        $first = $aller->first();
+        $valide = $first
+            && (int) $first->ville_arrivee_id === (int) $depart->ville_id
+            && (int) $first->ville_depart_id === (int) $arrivee->ville_id
+            && $first->departAt()->lt($depart->passage_at)
+            && ! static::where('retour_de', $commande)->exists();
 
-        return $aller && (int) $aller->ville_arrivee_id === (int) $depart->ville_id && $aller->departAt()->lt($depart->passage_at)
-            ? $commande : null;
+        return $valide ? [$commande, round($prix * min($seats, $aller->count()) * $pourcent / 100, 2)] : [null, 0.0];
+    }
+
+    /**
+     * After an outbound ticket is cancelled, its return tickets keep the discount only for the outbound seats
+     * still active: unpaid ones lose it (cancelling the outbound for free must not keep a cheaper return).
+     */
+    private function retirerRemiseRetour(): void
+    {
+        if (! $this->commande) {
+            return;
+        }
+        $retours = static::where('retour_de', $this->commande)->whereNull('promotion_id')->where('remise', '>', 0)->orderBy('num_siege')->get();
+        if ($retours->isEmpty()) {
+            return;
+        }
+        $restants = static::where('commande', $this->commande)->count();
+        $retours->slice($restants)->reject->isPaid()->each(fn ($r) => $r->forceFill(['remise' => 0])->save());
     }
 
     /** Traveller of this seat (typed at booking), else the account holder. */
@@ -225,6 +252,15 @@ class Reservation extends Model
         }
 
         return static::withoutGlobalScope('active')->where('commande', $this->commande)->orderBy('num_siege')->get();
+    }
+
+    /**
+     * The tickets of a query, one group per order (scheduled e-mails: one per order, not per seat). The rows
+     * are read once before any change: paging while marking them sent would skip some.
+     */
+    public static function parCommande($query): \Illuminate\Support\Collection
+    {
+        return $query->with('user')->orderBy('id')->get()->groupBy(fn (self $r) => $r->commande ?: 'id-' . $r->id);
     }
 
     /** New order reference, e.g. "C7K2M9QXA". */
@@ -340,9 +376,14 @@ class Reservation extends Model
             'frais_annulation' => $this->isPaid() ? $quote['frais'] : null,
         ])->save();
 
+        $this->retirerRemiseRetour();
+        // a cancelled order gives its promo code use back
+        $this->promotion?->recompter();
+
         // a seat is free again: tell the people waiting for this bus ("Prévenez-moi")
-        if ($this->voyage_id) {
-            AlertePlace::notifier((int) $this->voyage_id);
+        // (after the response, once per bus even when several seats are cancelled together)
+        if ($voyageId = (int) $this->voyage_id) {
+            \App\Support\ApresReponse::executer(fn () => AlertePlace::notifier($voyageId), 'alerte-places-' . $voyageId);
         }
     }
 
@@ -357,15 +398,42 @@ class Reservation extends Model
         ])->save();
     }
 
-    /** Releases the seats of card payments abandoned for too long. */
+    /**
+     * Releases the seats of card payments abandoned for too long. Each row is re-read under a lock: the CMI
+     * callback may be confirming the same ticket at this very moment (see PaymentController::callback).
+     */
     public static function expirePendingPayments(): int
     {
-        $expired = static::where('statut', self::EN_ATTENTE)
+        $ids = static::where('statut', self::EN_ATTENTE)
             ->where('created_at', '<', now()->subMinutes(self::DELAI_PAIEMENT_MINUTES))
-            ->get();
-        $expired->each->cancel('systeme');
+            ->pluck('id');
 
-        return $expired->count();
+        return $ids->filter(fn ($id) => \Illuminate\Support\Facades\DB::transaction(function () use ($id) {
+            $billet = static::lockForUpdate()->find($id);
+            if (! $billet || $billet->statut !== self::EN_ATTENTE || $billet->isPaid()) {
+                return false;
+            }
+            $billet->cancel('systeme');
+
+            return true;
+        }))->count();
+    }
+
+    /**
+     * A card payment confirmed after the seat hold expired: the ticket comes back if its seat is still free
+     * on its segment (call inside a transaction holding the voyage lock). False = seat resold, refund it.
+     */
+    public function revivre(?Voyage $voyage): bool
+    {
+        $depart = $voyage?->arrets->firstWhere('id', $this->arret_depart_id);
+        $arrivee = $voyage?->arrets->firstWhere('id', $this->arret_arrivee_id);
+        if (! $depart || ! $arrivee || in_array((int) $this->num_siege, $voyage->seatsTaken($depart, $arrivee, $this->id))) {
+            return false;
+        }
+        $this->forceFill(['statut' => self::EN_ATTENTE, 'siege_actif' => $this->num_siege, 'annulee_le' => null, 'annulee_par' => null,
+            'montant_rembourse' => null, 'frais_annulation' => null])->save();
+
+        return true;
     }
 
     /** [label, tone] for the admin/client badges. */
@@ -464,15 +532,22 @@ class Reservation extends Model
      */
     public function encaisser(User $par, string $mode = 'especes', bool $recu = true): float
     {
-        $montant = $this->resteAPayer();
+        // the row is re-read under a lock: a double click / double scan must not collect the same money twice
+        $montant = \Illuminate\Support\Facades\DB::transaction(function () use ($par, $mode) {
+            $frais = static::withoutGlobalScopes()->lockForUpdate()->find($this->id);
+            $this->setRawAttributes($frais->getAttributes(), true);
+            $montant = $this->resteAPayer();
+            if ($montant <= 0) {
+                return 0.0;
+            }
+            $this->encaissements()->create(['user_id' => $par->id, 'montant' => $montant, 'mode' => $mode]);
+            $this->markPaid($mode === 'carte' ? 'guichet-carte' : 'guichet');
+
+            return $montant;
+        });
         if ($montant <= 0) {
             return 0.0;
         }
-
-        \Illuminate\Support\Facades\DB::transaction(function () use ($par, $mode, $montant) {
-            $this->encaissements()->create(['user_id' => $par->id, 'montant' => $montant, 'mode' => $mode]);
-            $this->markPaid($mode === 'carte' ? 'guichet-carte' : 'guichet');
-        });
         // receipt to the traveller at once: a payment the staff did not record = no receipt = the client complains
         if ($recu) {
             \App\Mail\ReservationMail::sendTo($this, 'paiement');

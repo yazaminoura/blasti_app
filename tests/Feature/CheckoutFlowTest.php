@@ -102,7 +102,8 @@ class CheckoutFlowTest extends TestCase
 
     public function test_local_test_card_payment_pays_the_whole_order(): void
     {
-        $this->app['env'] = 'local'; // no CMI keys + local PC = test payment page
+        $this->app['env'] = 'local'; // no CMI keys + local PC in debug + SAFAR_PAIEMENT_TEST = test payment page
+        config(['app.debug' => true, 'safar.paiement_test' => true]);
         // outside the "testing" env Laravel checks CSRF tokens again: not what this test is about
         $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
 

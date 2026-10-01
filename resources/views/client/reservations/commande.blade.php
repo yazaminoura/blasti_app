@@ -34,7 +34,16 @@
                         <span class="d-block d-md-inline ms-md-2"><i class="isax isax-sms me-1"></i>{{ __('Les billets (PDF) ont aussi été envoyés à :email.', ['email' => $first->user?->email]) }}</span>
                     </p>
                 </div>
-                @if ($actifs->isNotEmpty())
+                @if ($enAttente)
+                    {{-- card payment not finished: go back to the bank page, or release the seats --}}
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="{{ route('payment.cmi.start', $actifs->firstWhere('statut', \App\Models\Reservation::EN_ATTENTE)) }}" class="btn btn-primary rounded-pill px-4 fw-semibold"><i class="isax isax-card me-1"></i>{{ __('Continuer le paiement') }}</a>
+                        <form method="POST" action="{{ route('client.commande.abandon', $commande) }}" data-bl-confirm="{{ __('Abandonner ce paiement ?') }}" data-bl-confirm-text="{{ __('Les sièges seront libérés pour les autres voyageurs.') }}" data-bl-confirm-button="{{ __('Oui, abandonner') }}" data-bl-danger>
+                            @csrf
+                            <button type="submit" class="btn btn-light rounded-pill px-4 fw-semibold"><i class="isax isax-close-circle me-1"></i>{{ __('Abandonner') }}</button>
+                        </form>
+                    </div>
+                @elseif ($actifs->isNotEmpty())
                     <div class="d-flex flex-wrap gap-2">
                         @include('partials.whatsapp-pdf', ['billets' => $actifs, 'pdf' => route('client.commande.download', $commande), 'nom' => 'billets-' . $commande . '.pdf', 'class' => 'btn bl-btn-whatsapp rounded-pill px-4 fw-semibold'])
                         <a href="{{ route('client.commande.download', $commande) }}" class="btn btn-light rounded-pill px-4 fw-semibold"><i class="isax isax-document-download me-1"></i>{{ $actifs->count() > 1 ? __('Tous les billets (PDF)') : __('Billet (PDF)') }}</a>
@@ -89,7 +98,7 @@
             </div>
 
             {{-- round trip: book the return right away (discount config safar.remise_retour_pourcent) --}}
-            @if ($actifs->isNotEmpty() && ! $first->retour_de && $first->departAt()->isFuture())
+            @if ($actifs->isNotEmpty() && ! $first->retour_de && ! $enAttente && $first->departAt()->isFuture() && ! \App\Models\Reservation::where('retour_de', $commande)->exists())
                 @php $remiseRetour = (float) config('safar.remise_retour_pourcent'); @endphp
                 <form method="GET" action="{{ route('voyages.client.index') }}" class="bl-return-card mt-4">
                     <input type="hidden" name="ville_depart" value="{{ $first->ville_arrivee_id }}">

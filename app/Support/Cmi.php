@@ -22,11 +22,12 @@ class Cmi
 
     /**
      * No CMI keys yet and the app runs on a developer PC (APP_ENV=local): a clearly labelled test payment page
-     * replaces the CMI page, so the whole flow can be tried. No money moves. Never active in production.
+     * replaces the CMI page, so the whole flow can be tried. No money moves. Needs APP_ENV=local AND APP_DEBUG=true
+     * AND SAFAR_PAIEMENT_TEST=true: a server left in "local" by mistake still does not hand out free tickets.
      */
     public static function testMode(): bool
     {
-        return ! self::enabled() && app()->environment('local') && (bool) config('safar.paiement_test', true);
+        return ! self::enabled() && app()->environment('local') && (bool) config('app.debug') && (bool) config('safar.paiement_test', false);
     }
 
     /** Card payment can be offered to clients (real CMI, or the local test page). */
@@ -40,10 +41,28 @@ class Cmi
         return (string) config('services.cmi.gateway_url');
     }
 
-    /** Amount of the whole order (its seats are booked, paid and expire together), as sent to CMI ("123.00"). */
+    /**
+     * Amount of the order's seats still waiting for this payment, as sent to CMI ("123.00"). Seats the client
+     * cancelled before paying are not charged.
+     */
     public static function amount(Reservation $reservation): string
     {
-        return number_format($reservation->commandeBillets()->sum(fn ($b) => $b->total()), 2, '.', '');
+        return self::format($reservation->commandeBillets()->where('statut', Reservation::EN_ATTENTE)->sum(fn ($b) => $b->total()));
+    }
+
+    /**
+     * Seats a confirmed CMI payment covers: those still on hold, plus those whose hold expired while the
+     * client was on the bank page (cancelled by the system, never by the client).
+     */
+    public static function billetsPayes(\Illuminate\Support\Collection $billets): \Illuminate\Support\Collection
+    {
+        return $billets->reject->isPaid()->filter(fn ($b) => $b->statut === Reservation::EN_ATTENTE
+            || ($b->isCancelled() && $b->annulee_par === 'systeme'))->values();
+    }
+
+    public static function format(float $montant): string
+    {
+        return number_format($montant, 2, '.', '');
     }
 
     /** Signed form fields posted to the CMI gateway. */

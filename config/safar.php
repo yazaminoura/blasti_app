@@ -21,8 +21,8 @@ return [
         '#334155' => 'Ardoise',
     ],
 
-    // Demo data loaded by "php artisan migrate" on an empty database (false to start empty)
-    'demo' => (bool) env('DEMO_DATA', true),
+    // Demo data loaded by "php artisan migrate" on an empty database (developer PC only, never in production)
+    'demo' => (bool) env('DEMO_DATA', false),
 
     // Seats one client can book in a single order (one ticket per seat)
     'max_sieges' => (int) env('SAFAR_MAX_SIEGES', 6),
@@ -67,7 +67,7 @@ return [
     'modification_heures' => (int) env('SAFAR_MODIFICATION_HEURES', 48),
 
     // Local PC without CMI keys: test card payment page (no money moves; never used when APP_ENV is not "local")
-    'paiement_test' => (bool) env('SAFAR_PAIEMENT_TEST', true),
+    'paiement_test' => (bool) env('SAFAR_PAIEMENT_TEST', false),
 
     // Guest pages: seconds before the sign in / sign up popup opens (0 = never)
     'popup_connexion_secondes' => (int) env('SAFAR_POPUP_SECONDES', 40),

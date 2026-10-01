@@ -19,7 +19,7 @@ class PromotionController extends Controller
 
     public function create()
     {
-        return view('admin.promotions.create', ['promotion' => new Promotion(['type' => 'pourcentage', 'actif' => true])]);
+        return view('admin.promotions.create', ['promotion' => new Promotion(['type' => 'pourcentage', 'actif' => true, 'max_par_client' => 1])]);
     }
 
     public function store(Request $request)
@@ -44,7 +44,7 @@ class PromotionController extends Controller
     public function destroy(Promotion $promotion)
     {
         // used codes stay in the history of the tickets: they are only switched off
-        if ($promotion->utilisations > 0) {
+        if ($promotion->reservations()->withoutGlobalScopes()->exists()) {
             $promotion->update(['actif' => false]);
 
             return back()->with('success', "Le code {$promotion->code} a déjà servi : il est désactivé au lieu d'être supprimé.");
@@ -66,6 +66,7 @@ class PromotionController extends Controller
             'debut' => ['nullable', 'date'],
             'fin' => ['nullable', 'date', 'after_or_equal:debut'],
             'max_utilisations' => ['nullable', 'integer', 'min:1'],
+            'max_par_client' => ['nullable', 'integer', 'min:1'],
         ], [
             'code.regex' => 'Le code ne peut contenir que des lettres, des chiffres, - et _ (sans espace).',
             'valeur.max' => 'Une réduction en pourcentage ne peut pas dépasser 100 %.',

@@ -34,10 +34,13 @@ class Voyage extends Model
     public function scopeBookable($query)
     {
         $now = now();
+        $demain = $now->copy()->addDay()->toDateString();
 
+        // plain comparisons, not whereDate(): MySQL can then use the (date_depart, heure_depart) index.
+        // ">= tomorrow" also works when SQLite stores the date as "Y-m-d 00:00:00".
         return $query
-            ->where(fn ($q) => $q->whereDate('date_depart', '>', $now->toDateString())
-                ->orWhere(fn ($q) => $q->whereDate('date_depart', $now->toDateString())
+            ->where(fn ($q) => $q->where('date_depart', '>=', $demain)
+                ->orWhere(fn ($q) => $q->where('date_depart', '>=', $now->toDateString())->where('date_depart', '<', $demain)
                     ->where('heure_depart', '>', $now->format('H:i:s'))))
             ->orderBy('date_depart')
             ->orderBy('heure_depart');

@@ -32,8 +32,11 @@ return Application::configure(basePath: dirname(__DIR__))
         // those routes check the CMI signature instead
         $middleware->validateCsrfTokens(except: ['paiement/*']);
 
-        // Trust all proxies (needed for ngrok / reverse proxies)
-        $middleware->trustProxies(at: '*');
+        // Proxies: only those listed in TRUSTED_PROXIES (config/trustedproxy.php) may set X-Forwarded-*,
+        // otherwise anyone could fake their IP (login limits) or the host (password reset links)
+
+        // Outside local: only the APP_URL host (and its subdomains) is accepted
+        $middleware->trustHosts();
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

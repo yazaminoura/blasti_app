@@ -912,5 +912,14 @@
     "Mode sombre": "الوضع الداكن",
     "Mode clair": "الوضع الفاتح",
     "Changer de langue": "تغيير اللغة",
-    "Menu": "القائمة"
+    "Menu": "القائمة",
+    "Un paiement par carte est déjà en cours (commande :ref). Terminez-le ou abandonnez-le avant de réserver d'autres sièges.": "هناك دفع بالبطاقة جارٍ بالفعل (الطلب :ref). أكمله أو تخلَّ عنه قبل حجز مقاعد أخرى.",
+    "Le paiement est abandonné et les sièges ont été libérés.": "تم التخلي عن الدفع وتحرير المقاعد.",
+    "Continuer le paiement": "متابعة الدفع",
+    "Abandonner ce paiement ?": "التخلي عن هذا الدفع؟",
+    "Les sièges seront libérés pour les autres voyageurs.": "سيتم تحرير المقاعد للمسافرين الآخرين.",
+    "Oui, abandonner": "نعم، تخلَّ",
+    "Abandonner": "تخلَّ",
+    "Vous êtes déjà monté dans le bus : ce billet ne peut plus être annulé.": "لقد صعدت إلى الحافلة بالفعل: لم يعد بالإمكان إلغاء هذه التذكرة.",
+    "Vous avez déjà utilisé ce code promo.": "لقد استعملت رمز التخفيض هذا من قبل."
 }

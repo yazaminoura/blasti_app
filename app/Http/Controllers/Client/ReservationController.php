@@ -117,8 +117,7 @@ class ReservationController extends Controller
         $cashRefused = ! $request->user()->mayPayAtBoarding();
         $quotaAtteint = ! $request->user()->mayBookUnpaid();
         // return trip of an outbound order: discount shown now, applied when booking
-        $retourDe = Reservation::retourValide($panier['retour_de'] ?? null, $request->user(), $depart);
-        $remiseRetour = $retourDe ? round($prix * count($seats) * (float) config('safar.remise_retour_pourcent') / 100, 2) : 0.0;
+        [$retourDe, $remiseRetour] = Reservation::remiseRetour($panier['retour_de'] ?? null, $request->user(), $depart, $arrivee, $prix, count($seats));
 
         return view('client.reservations.paiement', compact('voyage', 'depart', 'arrivee', 'prix', 'seats', 'modes', 'cashRefused', 'quotaAtteint', 'retourDe', 'remiseRetour'));
     }
@@ -132,7 +131,7 @@ class ReservationController extends Controller
         abort_unless($segment, 404);
 
         $total = $voyage->segmentPrice(...$segment) * count($panier['seats']);
-        [$promotion, $remise, $refus] = \App\Models\Promotion::appliquer($request->input('code'), $total);
+        [$promotion, $remise, $refus] = \App\Models\Promotion::appliquer($request->input('code'), $total, $request->user());
 
         return response()->json($refus
             ? ['ok' => false, 'message' => $refus]
@@ -146,6 +145,16 @@ class ReservationController extends Controller
         $billets = $this->ownedOrder($commande);
 
         return view('client.reservations.commande', ['billets' => $billets, 'commande' => $commande]);
+    }
+
+    /** Gives up a card payment in progress: the held seats are released at once. */
+    public function abandonPayment(string $commande)
+    {
+        $pending = $this->ownedOrder($commande)->where('statut', Reservation::EN_ATTENTE);
+        $pending->each->cancel('client');
+
+        return redirect()->route('client.profile.reservations.index')
+            ->with('success', __('Le paiement est abandonné et les sièges ont été libérés.'));
     }
 
     /** One PDF with every ticket of the order (one page + QR code per seat). */
@@ -178,6 +187,8 @@ class ReservationController extends Controller
             'arret_arrivee_id'  => ['nullable', 'integer'],
             'seats'             => ['required', 'array', 'min:1', 'max:' . config('safar.max_sieges')],
             'seats.*'           => ['required', 'integer', 'min:1', 'distinct'],
+            // seat price shown on the payment page: refused if it changed meanwhile (date-based increase, admin edit)
+            'prix_affiche'      => ['nullable', 'numeric'],
             // traveller of each seat, keyed by seat number (optional: the account holder by default)
             'passagers'         => ['nullable', 'array'],
             'passagers.*'       => ['nullable', 'string', 'max:120'],
@@ -203,6 +214,12 @@ class ReservationController extends Controller
         $maxUnpaid = (int) config('safar.max_non_payes');
         if (! $online && $maxUnpaid > 0 && $request->user()->siegesNonPayesAVenir() + $seats->count() > $maxUnpaid) {
             return back()->withInput()->with('error', __('Vous avez déjà :held siège(s) non payé(s) sur vos prochains voyages. Sans paiement, :max sièges au maximum : payez par carte pour réserver davantage.', ['held' => $request->user()->siegesNonPayesAVenir(), 'max' => $maxUnpaid]));
+        }
+
+        // one card checkout at a time per account: otherwise one account could hold every seat by never paying
+        if ($online && ($enCours = Reservation::where('user_id', $request->user()->id)->where('statut', Reservation::EN_ATTENTE)->first())) {
+            return redirect()->route('client.commande.show', $enCours->commande)
+                ->with('error', __('Un paiement par carte est déjà en cours (commande :ref). Terminez-le ou abandonnez-le avant de réserver d\'autres sièges.', ['ref' => $enCours->commande]));
         }
 
         try {
@@ -238,20 +255,23 @@ class ReservationController extends Controller
 
                 // discount of the order: promo code or return-trip discount (the better one), split between the seats
                 $prix = $voyage->segmentPrice($depart, $arrivee);
+                if ($request->filled('prix_affiche') && abs($prix - (float) $request->input('prix_affiche')) > 0.004) {
+                    throw new \DomainException(__('Le prix de ce trajet vient de changer : :prix DH par siège au lieu de :avant DH. Vérifiez le total puis confirmez à nouveau.', [
+                        'prix' => number_format($prix, 2, ',', ' '), 'avant' => number_format((float) $request->input('prix_affiche'), 2, ',', ' '),
+                    ]));
+                }
                 $total = $prix * $seats->count();
-                [$promotion, $remisePromo, $refus] = \App\Models\Promotion::appliquer($request->input('code_promo'), $total);
+                [$promotion, $remisePromo, $refus] = \App\Models\Promotion::appliquer($request->input('code_promo'), $total, $request->user(), verrou: true);
                 if ($refus) {
                     throw new \DomainException($refus);
                 }
-                $retourDe = Reservation::retourValide($request->input('retour_de'), $request->user(), $depart);
-                $remiseRetour = $retourDe ? round($total * (float) config('safar.remise_retour_pourcent') / 100, 2) : 0.0;
+                [$retourDe, $remiseRetour] = Reservation::remiseRetour($request->input('retour_de'), $request->user(), $depart, $arrivee, $prix, $seats->count());
                 if ($remiseRetour > $remisePromo) {
                     $promotion = null;
                 }
                 $remises = Reservation::repartir(max($remisePromo, $remiseRetour), $seats->count());
-                $promotion?->increment('utilisations');
 
-                return $seats->values()->map(fn ($seat, $i) => Reservation::create([
+                $billets = $seats->values()->map(fn ($seat, $i) => Reservation::create([
                     'commande'          => $commande,
                     'retour_de'         => $retourDe,
                     'promotion_id'      => $promotion?->id,
@@ -280,6 +300,9 @@ class ReservationController extends Controller
                     // agency payment has its own deadline (reservations:agence): no presence e-mail either
                     'presence_confirmee_le' => ! $online && $agence ? now() : null,
                 ]));
+                $promotion?->recompter();
+
+                return $billets;
             });
         } catch (\DomainException $e) {
             return back()->withInput()->with('error', $e->getMessage());
@@ -362,8 +385,11 @@ class ReservationController extends Controller
             $reservation->departAt()->isPast() => 'parti',
             default => 'ok',
         };
-        if ($etat === 'ok' && $reservation->presence_confirmee_le === null) {
-            $reservation->forceFill(['presence_confirmee_le' => now()])->save();
+        if ($etat === 'ok') {
+            // one e-mail per order: the link confirms every seat still booked in it
+            $reservation->commandeBillets()->reject->isCancelled()->whereNull('presence_confirmee_le')
+                ->each(fn (Reservation $b) => $b->forceFill(['presence_confirmee_le' => now()])->save());
+            $reservation->refresh();
         }
         $reservation->loadMissing(['villeDepart', 'villeArrivee']);
 
@@ -396,9 +422,11 @@ class ReservationController extends Controller
         abort_unless($reservation->user_id === auth()->id(), 403);
 
         if (! $reservation->canBeCancelledByClient()) {
-            return back()->with('error', $reservation->isCancelled()
-                ? __('Ce billet est déjà annulé.')
-                : __('Le bus est déjà parti : ce billet ne peut plus être annulé.'));
+            return back()->with('error', match (true) {
+                $reservation->isCancelled() => __('Ce billet est déjà annulé.'),
+                $reservation->isBoarded() => __('Vous êtes déjà monté dans le bus : ce billet ne peut plus être annulé.'),
+                default => __('Le bus est déjà parti : ce billet ne peut plus être annulé.'),
+            });
         }
 
         $reservation->cancel('client');
@@ -439,7 +467,10 @@ class ReservationController extends Controller
             ->findOrFail($id);
 
         $user = auth()->user();
-        abort_unless($reservation->user_id === $user->id || ($user->isadmin && ($user->hasPermission('reservations.read') || $user->hasPermission('scanner.use'))), 403);
+        // staff with the right; a company account only for its own company's buses
+        $staff = $user->isadmin && ($user->hasPermission('reservations.read') || $user->hasPermission('scanner.use'))
+            && (! $user->societe_id || (int) $reservation->autocar?->societe_id === (int) $user->societe_id);
+        abort_unless($reservation->user_id === $user->id || $staff, 403);
 
         return $reservation;
     }

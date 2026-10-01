@@ -54,6 +54,18 @@ class DemoDataSeeder extends Seeder
     private const CLIENTS = ['Salma Bennani', 'Youssef El Amrani', 'Khadija Alaoui', 'Omar Tazi', 'Imane Chraibi', 'Hamza Idrissi',
         'Nadia Berrada', 'Mehdi Lahlou', 'Sara El Fassi', 'Anas Benjelloun', 'Fatima Zahra Ouazzani', 'Karim Sefrioui'];
 
+    /**
+     * End of "php artisan migrate": an empty database gets the demo (fresh clone: migrate is enough).
+     * Skipped when there are already voyages, in tests, in production, or when DEMO_DATA=false.
+     */
+    public static function chargerSiVide(): void
+    {
+        if (! config('safar.demo') || app()->isProduction() || app()->runningUnitTests() || Voyage::query()->exists()) {
+            return;
+        }
+        (new self())->run();
+    }
+
     public function run(): void
     {
         // one transaction: much faster on SQLite, and all-or-nothing

@@ -10,16 +10,42 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-// Reminder e-mail (with the PDF ticket) for every trip leaving tomorrow; each ticket gets it once.
+// New site: first super admin account (asks the password, never written in a file). Also resets an existing one.
+Artisan::command('blasti:admin {email?} {--name=}', function () {
+    $email = $this->argument('email') ?: $this->ask('E-mail');
+    $name = $this->option('name') ?: $this->ask('Nom', 'Administrateur');
+    $password = $this->secret('Mot de passe (8 caractères minimum)');
+
+    $errors = \Illuminate\Support\Facades\Validator::make(['email' => $email, 'password' => $password, 'password_confirmation' => $this->secret('Confirmez le mot de passe')], [
+        'email' => ['required', 'email'], 'password' => ['required', 'confirmed', \Illuminate\Validation\Rules\Password::defaults()],
+    ])->errors();
+    if ($errors->isNotEmpty()) {
+        foreach ($errors->all() as $error) {
+            $this->error($error);
+        }
+
+        return 1;
+    }
+
+    $user = \App\Models\User::firstOrNew(['email' => strtolower($email)]);
+    $user->forceFill([
+        'name' => $user->name ?: $name, 'password' => \Illuminate\Support\Facades\Hash::make($password),
+        'isadmin' => 1, 'societe_id' => null, 'email_verified_at' => $user->email_verified_at ?? now(), 'desactive_le' => null,
+    ])->save();
+    $user->roles()->detach(); // super admin = admin without role
+
+    $this->info(($user->wasRecentlyCreated ? 'Super admin créé : ' : 'Super admin mis à jour : ') . $user->email);
+})->purpose('Crée (ou remet) le compte super admin du site');
+
+// Reminder e-mail (with the PDF tickets) for every trip leaving tomorrow; each order gets it once.
 Artisan::command('reservations:rappels', function () {
     $sent = 0;
-    Reservation::where('statut', Reservation::CONFIRMEE)
+    Reservation::parCommande(Reservation::where('statut', Reservation::CONFIRMEE)
         ->whereDate('date_depart', today()->addDay())
-        ->whereNull('rappel_envoye_le')
-        ->with('user')
-        ->each(function (Reservation $reservation) use (&$sent) {
-            if (ReservationMail::sendTo($reservation, 'rappel')) {
-                $reservation->forceFill(['rappel_envoye_le' => now()])->save();
+        ->whereNull('rappel_envoye_le'))
+        ->each(function ($billets) use (&$sent) {
+            if (ReservationMail::sendTo($billets, 'rappel', attendre: true)) {
+                Reservation::whereKey($billets->modelKeys())->update(['rappel_envoye_le' => now()]);
                 $sent++;
             }
         });
@@ -36,73 +62,92 @@ Artisan::command('reservations:expirer', function () {
 //  2. cancelled `limite_heures` after the e-mail without payment nor answer,
 //     or `paiement_heures` after the e-mail if the client confirmed but still did not pay
 //  Never after departure: then the controller's scan decides (paid at the door, or no-show).
+//  One e-mail per order; its link confirms every seat of the order.
 Artisan::command('reservations:presence', function () {
     if (! config('safar.confirmation.active')) {
         return $this->info('Confirmation de présence désactivée.');
     }
     $asked = $cancelled = 0;
 
-    Reservation::where('statut', Reservation::CONFIRMEE)
+    Reservation::parCommande(Reservation::where('statut', Reservation::CONFIRMEE)
         ->whereNull('paye_le')
         ->whereDate('date_depart', '>=', today())
-        ->whereHas('modeReglement', fn ($q) => $q->where('en_ligne', false)->where('en_agence', false))
-        ->with('user')
-        ->each(function (Reservation $r) use (&$asked, &$cancelled) {
+        ->whereHas('modeReglement', fn ($q) => $q->where('en_ligne', false)->where('en_agence', false)))
+        ->each(function ($billets) use (&$asked, &$cancelled) {
+            $r = $billets->first();
             if ($r->departAt()->isPast()) {
                 return; // bus gone: the controller's scan decides (no-show)
             }
-            if ($r->confirmation_demandee_le === null) {
-                if ($r->presenceAskedAt()->lte(now()) && ReservationMail::sendTo($r, 'presence')) {
-                    $r->forceFill(['confirmation_demandee_le' => now()])->save();
+            $nonDemandes = $billets->whereNull('confirmation_demandee_le');
+            if ($nonDemandes->isNotEmpty()) {
+                if ($r->presenceAskedAt()->lte(now()) && ReservationMail::sendTo($billets, 'presence', attendre: true)) {
+                    Reservation::whereKey($nonDemandes->modelKeys())->update(['confirmation_demandee_le' => now()]);
                     $asked++;
                 }
-            } elseif (($due = $r->cancellationDue()) && $due->lte(now())) {
-                $r->cancel('systeme');
-                ReservationMail::sendTo($r, 'sans_confirmation');
-                $cancelled++;
+
+                return;
+            }
+            $dus = $billets->filter(fn (Reservation $b) => ($due = $b->cancellationDue()) && $due->lte(now()));
+            if ($dus->isNotEmpty()) {
+                $dus->each->cancel('systeme');
+                ReservationMail::sendTo($dus, 'sans_confirmation');
+                $cancelled += $dus->count();
             }
         });
 
     $this->info("{$asked} e-mail(s) « payez ou confirmez » envoyé(s), {$cancelled} billet(s) non payé(s) annulé(s).");
 })->purpose('Billets non payés : e-mail 24 h après la réservation, annulation sans paiement');
 
-// The day after the trip: "how was it?" e-mail with the review button (once per ticket, trips of the last 3 days)
+// The day after the trip: "how was it?" e-mail with the review button (once per order, trips of the last 3 days).
+// Only to people who travelled: boarded, or paid on a bus whose controller did not use the scanner.
 Artisan::command('reservations:avis', function () {
     $sent = 0;
-    Reservation::where('statut', Reservation::CONFIRMEE)
+    $scanne = [];
+    Reservation::parCommande(Reservation::where('statut', Reservation::CONFIRMEE)
         ->whereNull('avis_demande_le')
         ->whereDate('date_arrivee', '>=', today()->subDays(3))
         ->whereDate('date_arrivee', '<=', today())
-        ->whereDoesntHave('avis')
-        ->with('user')
-        ->each(function (Reservation $r) use (&$sent) {
-            if ($r->arriveeAt()->isPast() && ReservationMail::sendTo($r, 'avis')) {
-                $r->forceFill(['avis_demande_le' => now()])->save();
+        ->whereDoesntHave('avis'))
+        ->each(function ($billets) use (&$sent, &$scanne) {
+            $r = $billets->first();
+            if (! $r->arriveeAt()->isPast()) {
+                return;
+            }
+            $busScanne = $scanne[$r->voyage_id] ??= Reservation::where('voyage_id', $r->voyage_id)->whereNotNull('embarque_le')->exists();
+            $voyageurs = $billets->filter(fn (Reservation $b) => $b->isBoarded() || ($b->isPaid() && ! $busScanne));
+            if ($voyageurs->isNotEmpty() && ReservationMail::sendTo($voyageurs, 'avis', attendre: true)) {
                 $sent++;
             }
+            // asked (or skipped: no-show) once for good
+            Reservation::whereKey($billets->modelKeys())->update(['avis_demande_le' => now()]);
         });
     $this->info("{$sent} demande(s) d'avis envoyée(s).");
 })->purpose('Demande un avis aux voyageurs après leur trajet');
 
-// "Pay at an agency": the order code must be paid within config safar.agence_delai_heures, else cancelled
+// "Pay at an agency": the order code must be paid within config safar.agence_delai_heures, else cancelled.
+// Never after departure: then it was a no-show, kept as such (User::absences).
 Artisan::command('reservations:agence', function () {
     $delai = (int) config('safar.agence_delai_heures');
     $cancelled = 0;
-    Reservation::where('statut', Reservation::CONFIRMEE)->whereNull('paye_le')
+    Reservation::parCommande(Reservation::where('statut', Reservation::CONFIRMEE)->whereNull('paye_le')
         ->whereHas('modeReglement', fn ($q) => $q->where('en_agence', true))
-        ->where('created_at', '<', now()->subHours($delai))
-        ->with('user')
-        ->each(function (Reservation $r) use (&$cancelled) {
-            $r->cancel('systeme');
-            ReservationMail::sendTo($r, 'annulee');
-            $cancelled++;
+        ->where('created_at', '<', now()->subHours($delai)))
+        ->each(function ($billets) use (&$cancelled) {
+            $billets = $billets->reject(fn (Reservation $r) => $r->departAt()->isPast());
+            if ($billets->isEmpty()) {
+                return;
+            }
+            $billets->each->cancel('systeme');
+            ReservationMail::sendTo($billets, 'annulee');
+            $cancelled += $billets->count();
         });
     $this->info("{$cancelled} billet(s) non payé(s) en agence annulé(s).");
 })->purpose('Annule les billets à payer en agence non payés à temps');
 
-// Needs the Laravel scheduler on the server: "* * * * * php artisan schedule:run" (cron)
-Schedule::command('reservations:rappels')->dailyAt('18:00');
-Schedule::command('reservations:expirer')->everyFiveMinutes();
-Schedule::command('reservations:presence')->everyFifteenMinutes();
-Schedule::command('reservations:avis')->dailyAt('10:00');
-Schedule::command('reservations:agence')->everyFifteenMinutes();
+// Needs the Laravel scheduler on the server: "* * * * * php artisan schedule:run" (cron).
+// withoutOverlapping: a slow run (SMTP) is never doubled by the next one (double e-mails / cancellations).
+Schedule::command('reservations:rappels')->dailyAt('18:00')->withoutOverlapping();
+Schedule::command('reservations:expirer')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('reservations:presence')->everyFifteenMinutes()->withoutOverlapping();
+Schedule::command('reservations:avis')->dailyAt('10:00')->withoutOverlapping();
+Schedule::command('reservations:agence')->everyFifteenMinutes()->withoutOverlapping();

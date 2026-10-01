@@ -141,6 +141,7 @@ class GrowthFeaturesTest extends TestCase
         $billet = Reservation::sole();
 
         $this->actingAs($this->client)->get(route('client.avis.create', $billet))->assertNotFound(); // not travelled yet
+        $billet->embarquer(User::factory()->create()); // the review request only goes to people who travelled
         $this->travelTo(now()->addDays(4));
         $this->artisan('reservations:avis')->assertSuccessful();
         Mail::assertSent(ReservationMail::class, fn ($m) => $m->type === 'avis');

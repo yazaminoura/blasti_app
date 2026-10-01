@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Site settings (a single row): name + color (Admin > Paramètres > Apparence),
@@ -33,13 +32,11 @@ class Parametre extends Model
 
     public static function appliquerALaConfig(): void
     {
+        // one query per request (no Schema::hasTable first: a missing table simply throws)
         try {
-            if (! Schema::hasTable('parametres')) {
-                return;
-            }
             $ligne = static::query()->first();
         } catch (\Throwable $e) {
-            return; // database unavailable (install, tests): keep the defaults
+            return; // database or table not there yet (install, first migrate): keep the defaults
         }
         if (! $ligne) {
             return;

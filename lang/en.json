@@ -912,5 +912,14 @@
     "Mode sombre": "Dark mode",
     "Mode clair": "Light mode",
     "Changer de langue": "Change language",
-    "Menu": "Menu"
+    "Menu": "Menu",
+    "Un paiement par carte est déjà en cours (commande :ref). Terminez-le ou abandonnez-le avant de réserver d'autres sièges.": "A card payment is already in progress (order :ref). Finish it or give it up before booking other seats.",
+    "Le paiement est abandonné et les sièges ont été libérés.": "The payment was given up and the seats were released.",
+    "Continuer le paiement": "Continue payment",
+    "Abandonner ce paiement ?": "Give up this payment?",
+    "Les sièges seront libérés pour les autres voyageurs.": "The seats will be released for other travellers.",
+    "Oui, abandonner": "Yes, give up",
+    "Abandonner": "Give up",
+    "Vous êtes déjà monté dans le bus : ce billet ne peut plus être annulé.": "You have already boarded the bus: this ticket can no longer be cancelled.",
+    "Vous avez déjà utilisé ce code promo.": "You have already used this promo code."
 }

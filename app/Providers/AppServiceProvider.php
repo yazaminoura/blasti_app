@@ -24,6 +24,13 @@ class AppServiceProvider extends ServiceProvider
     {
         Paginator::useBootstrapFive();
 
+        // fresh clone on a developer PC: demo data once every migration is done (DEMO_DATA, never in production)
+        \Illuminate\Support\Facades\Event::listen(\Illuminate\Database\Events\MigrationsEnded::class, function ($event) {
+            if ($event->method === 'up') {
+                \Database\Seeders\DemoDataSeeder::chargerSiVide();
+            }
+        });
+
         // Name and color chosen in Admin > Paramètres > Apparence
         \App\Models\Parametre::appliquerALaConfig();
 

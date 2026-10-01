@@ -14,7 +14,8 @@
                    :options="['pourcentage' => 'Pourcentage (%)', 'montant' => 'Montant fixe (DH)']" />
     <x-admin.field name="valeur" label="Valeur" type="number" col="col-md-6" required step="0.01" min="0.01" :value="$promotion->valeur" placeholder="10" />
     <x-admin.field name="min_montant" label="Commande minimum" type="number" col="col-md-6" step="0.01" min="0" suffix="DH" :value="$promotion->min_montant" hint="Vide : aucun minimum." />
-    <x-admin.field name="max_utilisations" label="Nombre d'utilisations maximum" type="number" col="col-md-6" min="1" :value="$promotion->max_utilisations" hint="Vide : illimité." />
+    <x-admin.field name="max_utilisations" label="Nombre d'utilisations maximum" type="number" col="col-md-6" min="1" :value="$promotion->max_utilisations" hint="Vide : illimité. Une commande annulée rend son utilisation." />
+    <x-admin.field name="max_par_client" label="Utilisations par client" type="number" col="col-md-6" min="1" :value="$promotion->max_par_client" hint="Commandes par compte client. Vide : illimité." />
 </x-admin.form-section>
 
 <x-admin.form-section title="Période" description="Vide : valable tout de suite et sans fin." icon="bi-calendar-range">

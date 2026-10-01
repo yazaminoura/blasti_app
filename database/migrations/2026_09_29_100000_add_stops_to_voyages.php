@@ -38,8 +38,9 @@ return new class extends Migration
         });
 
         Schema::table('reservations', function (Blueprint $table) {
-            $table->dropUnique('reservations_voyage_active_seat_unique');
+            // new index first: on MySQL the voyage_id foreign key needs an index starting with voyage_id at all times
             $table->index(['voyage_id', 'num_siege'], 'reservations_voyage_seat_index');
+            $table->dropUnique('reservations_voyage_active_seat_unique');
         });
 
         $now = now();
@@ -64,8 +65,8 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('reservations', function (Blueprint $table) {
-            $table->dropIndex('reservations_voyage_seat_index');
             $table->unique(['voyage_id', 'siege_actif'], 'reservations_voyage_active_seat_unique');
+            $table->dropIndex('reservations_voyage_seat_index');
             $table->dropConstrainedForeignId('arret_depart_id');
             $table->dropConstrainedForeignId('arret_arrivee_id');
             $table->dropColumn(['montant_rembourse', 'frais_annulation']);

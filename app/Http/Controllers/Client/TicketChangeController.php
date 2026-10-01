@@ -43,7 +43,8 @@ class TicketChangeController extends Controller
                     'voyage' => $voyage,
                     'depart' => $segment[0],
                     'arrivee' => $segment[1],
-                    'prix' => $voyage->segmentPrice(...$segment),
+                    // same bus: only the seat changes, the price stays the one of the ticket
+                    'prix' => (int) $voyage->id === (int) $reservation->voyage_id ? (float) $reservation->prix : $voyage->segmentPrice(...$segment),
                     'libres' => max(0, (int) $voyage->autocar?->nbr_siege - count($voyage->seatsTaken($segment[0], $segment[1], $reservation->id))),
                     'actuel' => $voyage->id === $reservation->voyage_id,
                 ];
@@ -68,6 +69,8 @@ class TicketChangeController extends Controller
             'voyage_id' => ['required', 'integer', 'exists:voyages,id'],
             'seats' => ['required', 'array', 'size:1'],
             'seats.*' => ['required', 'integer', 'min:1'],
+            // price shown on the page: refused if it changed meanwhile (date-based increase, admin edit)
+            'prix_affiche' => ['nullable', 'numeric'],
         ], [
             'seats.required' => __('Veuillez choisir un siège.'),
             'seats.size' => __('Veuillez choisir un seul siège.'),
@@ -93,6 +96,13 @@ class TicketChangeController extends Controller
                     throw new \DomainException(__("Ce siège vient d'être réservé par un autre client. Veuillez en choisir un autre."));
                 }
 
+                // same bus = only the seat changes, the price paid stays; another departure = its current price
+                $memeBus = (int) $voyage->id === (int) $reservation->voyage_id;
+                $prix = $memeBus ? (float) $reservation->prix : $voyage->segmentPrice($depart, $arrivee);
+                if (! $memeBus && $request->filled('prix_affiche') && abs($prix - (float) $request->input('prix_affiche')) > 0.004) {
+                    throw new \DomainException(__('Le prix de ce départ vient de changer : :prix DH. Vérifiez puis confirmez à nouveau.', ['prix' => number_format($prix, 2, ',', ' ')]));
+                }
+
                 $reservation->forceFill([
                     'voyage_id' => $voyage->id,
                     'num_siege' => $seat,
@@ -105,7 +115,7 @@ class TicketChangeController extends Controller
                     'type_voyage_id' => $voyage->type_voyage_id,
                     'arret_depart_id' => $depart->id,
                     'arret_arrivee_id' => $arrivee->id,
-                    'prix' => $voyage->segmentPrice($depart, $arrivee),
+                    'prix' => $prix,
                     'modifiee_le' => now(),
                     // the reminder is sent again for the new day
                     'rappel_envoye_le' => null,

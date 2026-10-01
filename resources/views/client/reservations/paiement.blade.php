@@ -21,6 +21,7 @@
             <form method="POST" action="{{ route('client.reservations.store') }}" id="pay-form">
                 @csrf
                 <input type="hidden" name="voyage_id" value="{{ $voyage->id }}">
+                <input type="hidden" name="prix_affiche" value="{{ $prix }}">
                 <input type="hidden" name="arret_depart_id" value="{{ $depart->id }}">
                 <input type="hidden" name="arret_arrivee_id" value="{{ $arrivee->id }}">
                 @foreach ($seats as $seat)

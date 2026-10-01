@@ -37,40 +37,45 @@ Route::get('/', function () {
         ->take(12)
         ->get();
 
-    // Real numbers for the home page (no invented figures)
-    $stats = [
-        'villes' => \App\Models\Ville::has('voyagesDepart')->orHas('voyagesArrivee')->count(),
-        'departs' => Voyage::bookable()->count(),
-        'societes' => \App\Models\Societe::has('autocars')->count(),
-        'billets' => \App\Models\Reservation::count(),
-    ];
+    // the heavy parts (300 departures, counts) are computed at most every 5 minutes, not on every visit
+    [$stats, $villesRecherche, $routes, $paiements] = \Illuminate\Support\Facades\Cache::remember('accueil', 300, function () {
+        // Real numbers for the home page (no invented figures)
+        $stats = [
+            'villes' => \App\Models\Ville::has('voyagesDepart')->orHas('voyagesArrivee')->count(),
+            'departs' => Voyage::bookable()->count(),
+            'societes' => \App\Models\Societe::has('autocars')->count(),
+            'billets' => \App\Models\Reservation::count(),
+        ];
 
-    // every city where a bus stops, intermediate stops included (Imouzzer, Ifrane...)
-    $villesRecherche = \App\Models\Ville::whereHas('arrets')->orderBy('ville')->get();
+        // every city where a bus stops, intermediate stops included (Imouzzer, Ifrane...)
+        $villesRecherche = \App\Models\Ville::whereHas('arrets')->orderBy('ville')->get();
 
-    // Popular routes: the city pairs with the most upcoming departures, cheapest current price, next departure
-    $routes = Voyage::bookable()
-        ->with(['villeDepart', 'villeArrivee', 'arrets'])
-        ->take(300)
-        ->get()
-        ->groupBy(fn ($v) => $v->ville_depart_id . '-' . $v->ville_arrivee_id)
-        ->map(fn ($groupe) => (object) [
-            'depart' => $groupe->first()->villeDepart,
-            'arrivee' => $groupe->first()->villeArrivee,
-            'departs' => $groupe->count(),
-            'prix' => $groupe->min(fn ($v) => $v->prixActuel()),
-            'prochain' => $groupe->first(),
-        ])
-        ->filter(fn ($r) => $r->depart && $r->arrivee && $r->depart->id !== $r->arrivee->id)
-        ->sortByDesc('departs')
-        ->take(8)
-        ->values();
+        // Popular routes: the city pairs with the most upcoming departures, cheapest current price, next departure
+        $routes = Voyage::bookable()
+            ->with(['villeDepart', 'villeArrivee', 'arrets'])
+            ->take(300)
+            ->get()
+            ->groupBy(fn ($v) => $v->ville_depart_id . '-' . $v->ville_arrivee_id)
+            ->map(fn ($groupe) => (object) [
+                'depart' => $groupe->first()->villeDepart,
+                'arrivee' => $groupe->first()->villeArrivee,
+                'departs' => $groupe->count(),
+                'prix' => $groupe->min(fn ($v) => $v->prixActuel()),
+                'prochain' => $groupe->first(),
+            ])
+            ->filter(fn ($r) => $r->depart && $r->arrivee && $r->depart->id !== $r->arrivee->id)
+            ->sortByDesc('departs')
+            ->take(8)
+            ->values();
 
-    // what the strip under the search may promise (only payment modes that really exist)
-    $paiements = [
-        'carte' => \App\Models\ModeReglement::where('en_ligne', true)->exists(),
-        'agence' => \App\Models\ModeReglement::where('en_agence', true)->exists(),
-    ];
+        // what the strip under the search may promise (only payment modes that really exist)
+        $paiements = [
+            'carte' => \App\Models\ModeReglement::where('en_ligne', true)->exists(),
+            'agence' => \App\Models\ModeReglement::where('en_agence', true)->exists(),
+        ];
+
+        return [$stats, $villesRecherche, $routes, $paiements];
+    });
 
     return view('welcome', compact('voyages', 'stats', 'villesRecherche', 'routes', 'paiements'));
 })->name('home');
@@ -149,6 +154,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/client/reservations', [ClientReservationController::class, 'store'])->middleware(['verified', 'throttle:20,1'])->name('client.reservations.store');
     Route::get('/commande/{commande}', [ClientReservationController::class, 'order'])->name('client.commande.show');
     Route::get('/commande/{commande}/billets.pdf', [ClientReservationController::class, 'downloadOrder'])->name('client.commande.download');
+    Route::post('/commande/{commande}/abandonner', [ClientReservationController::class, 'abandonPayment'])->middleware('verified')->name('client.commande.abandon');
     // card payment test page (local PC without CMI keys only, see Cmi::testMode)
     Route::post('/paiement/{reservation}/test', [PaymentController::class, 'test'])->name('payment.test');
 

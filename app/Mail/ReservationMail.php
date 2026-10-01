@@ -41,7 +41,7 @@ class ReservationMail extends Mailable
      * Sends without ever breaking the page (a mail server problem is logged, the booking stays valid).
      * $reservation: one ticket, or the tickets of one order (same client, same trip).
      */
-    public static function sendTo(Reservation|\Illuminate\Support\Collection $reservation, string $type): bool
+    public static function sendTo(Reservation|\Illuminate\Support\Collection $reservation, string $type, bool $attendre = false): bool
     {
         $billets = $reservation instanceof Reservation ? collect([$reservation]) : $reservation->values();
         $reservation = $billets->first();
@@ -49,15 +49,24 @@ class ReservationMail extends Mailable
         if (! $reservation?->user?->email || str_ends_with($reservation->user->email, '.invalid')) {
             return false;
         }
-        try {
-            Mail::to($reservation->user->email)->send(new self($reservation, $type, $billets));
+        $envoyer = function () use ($reservation, $type, $billets) {
+            try {
+                Mail::to($reservation->user->email)->send(new self($reservation, $type, $billets));
 
-            return true;
-        } catch (\Throwable $e) {
-            report($e);
+                return true;
+            } catch (\Throwable $e) {
+                report($e);
 
-            return false;
+                return false;
+            }
+        };
+        if ($attendre) {
+            return $envoyer();
         }
+        // web request: after the response, so the client (and the CMI callback) never wait for the PDF + SMTP
+        \App\Support\ApresReponse::executer($envoyer);
+
+        return true;
     }
 
     public function envelope(): Envelope

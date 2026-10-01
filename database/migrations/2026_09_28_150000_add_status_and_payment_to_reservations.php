@@ -28,8 +28,9 @@ return new class extends Migration
         DB::table('reservations')->update(['siege_actif' => DB::raw('num_siege')]);
 
         Schema::table('reservations', function (Blueprint $table) {
-            $table->dropUnique('reservations_voyage_seat_unique');
+            // new index first: on MySQL the voyage_id foreign key needs an index starting with voyage_id at all times
             $table->unique(['voyage_id', 'siege_actif'], 'reservations_voyage_active_seat_unique');
+            $table->dropUnique('reservations_voyage_seat_unique');
             $table->index('statut');
         });
 
@@ -49,9 +50,9 @@ return new class extends Migration
         DB::table('reservations')->where('statut', 'annulee')->delete();
 
         Schema::table('reservations', function (Blueprint $table) {
+            $table->unique(['voyage_id', 'num_siege'], 'reservations_voyage_seat_unique');
             $table->dropUnique('reservations_voyage_active_seat_unique');
             $table->dropIndex(['statut']);
-            $table->unique(['voyage_id', 'num_siege'], 'reservations_voyage_seat_unique');
             $table->dropColumn(['statut', 'siege_actif', 'paye_le', 'paiement_ref', 'annulee_le', 'annulee_par', 'rembourse_le', 'rappel_envoye_le']);
         });
     }

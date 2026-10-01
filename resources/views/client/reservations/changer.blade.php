@@ -127,6 +127,7 @@
                             @csrf
                             @method('PUT')
                             <input type="hidden" name="voyage_id" value="{{ $choix->voyage->id }}">
+                            <input type="hidden" name="prix_affiche" value="{{ $choix->prix }}">
                         </form>
 
                         <div class="card border-0 shadow-sm mb-3">

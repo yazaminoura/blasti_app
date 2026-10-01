@@ -73,6 +73,15 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // every CMI callback (order, transaction, amount, result; never card data), kept 1 year for disputes
+        'payments' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/payments.log'),
+            'level' => 'info',
+            'days' => 365,
+            'replace_placeholders' => true,
+        ],
+
         'slack' => [
             'driver' => 'slack',
             'url' => env('LOG_SLACK_WEBHOOK_URL'),
