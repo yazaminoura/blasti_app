@@ -1,0 +1,21 @@
+{
+  "name": "BLASTI - Billets d'Autocar au Maroc",
+  "short_name": "BLASTI",
+  "description": "Consultez vos billets, QR codes et horaires d'autocar en ligne et hors-ligne.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#1e40af",
+  "icons": [
+    {
+      "src": "/assets/img/logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/img/logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

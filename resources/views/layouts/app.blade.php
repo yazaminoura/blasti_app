@@ -4,6 +4,8 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="csrf-token" content="{{ csrf_token() }}">
+        <link rel="manifest" href="/manifest.json">
+        <meta name="theme-color" content="#1e40af">
         @include('partials.favicon')
 
         <title>{{ isset($title) ? $title . ' | ' : '' }}{{ __(':brand : billets de bus au Maroc', ['brand' => config('safar.nom')]) }}</title>
@@ -54,5 +56,12 @@
         @include('layouts.scripts')
         @include('partials.auth-modal')
 
+        <script>
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').catch(function() {});
+                });
+            }
+        </script>
     </body>
 </html>

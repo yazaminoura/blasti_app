@@ -260,6 +260,92 @@ class Voyage extends Model
         return $this->hasMany(VoyageArret::class)->orderBy('ordre');
     }
 
+    public function chauffeur()
+    {
+        return $this->belongsTo(User::class, 'chauffeur_id');
+    }
+
+    public function estEnRetard(): bool
+    {
+        return (int) $this->retard_minutes > 0;
+    }
+
+    public function heureDepartEstimee(): string
+    {
+        return $this->departAt()->addMinutes((int) $this->retard_minutes)->format('H:i');
+    }
+
+    public function heureArriveeEstimee(): string
+    {
+        return $this->arriveeAt()->addMinutes((int) $this->retard_minutes)->format('H:i');
+    }
+
+    /**
+     * Operational data for the chauffeur: stops, arrival times, passenger counts, and seat numbers.
+     * Strictly protects client privacy: NO client names, NO phone numbers, NO emails, NO prices.
+     */
+    public function statsChauffeur(): array
+    {
+        $capacite = (int) ($this->autocar?->nbr_siege ?? 0);
+        $arrets = $this->arrets()->with('ville')->orderBy('ordre')->get();
+        $billets = $this->reservations()
+            ->where('statut', '!=', Reservation::ANNULEE)
+            ->where('statut', '!=', Reservation::EN_ATTENTE)
+            ->with(['villeDepart', 'villeArrivee'])
+            ->get();
+
+        $totalClients = $billets->count();
+        $aBord = $billets->filter->isBoarded()->count();
+
+        // Calculate flow per stop
+        $cumul = 0;
+        $arretsStats = [];
+        $retard = (int) $this->retard_minutes;
+
+        foreach ($arrets as $arret) {
+            $montees = $billets->where('arret_depart_id', $arret->id)->count();
+            $descentes = $billets->where('arret_arrivee_id', $arret->id)->count();
+            $cumul = max(0, $cumul + $montees - $descentes);
+
+            $passagePrevu = $arret->passage_at ? \Carbon\Carbon::parse($arret->passage_at) : null;
+            $passageEstime = $passagePrevu ? $passagePrevu->copy()->addMinutes($retard) : null;
+
+            $arretsStats[] = [
+                'ville' => $arret->ville?->ville ?? 'Arrêt',
+                'ordre' => (int) $arret->ordre,
+                'passage_prevu' => $passagePrevu?->format('H:i') ?? '—',
+                'passage_estime' => $passageEstime?->format('H:i') ?? '—',
+                'montees' => $montees,
+                'descentes' => $descentes,
+                'passagers_a_bord' => $cumul,
+            ];
+        }
+
+        // Anonymized seat map (1 to $capacite)
+        $siegesOccupes = $billets->keyBy('num_siege');
+        $sieges = [];
+        for ($i = 1; $i <= $capacite; $i++) {
+            $billet = $siegesOccupes->get($i);
+            $sieges[] = [
+                'numero' => $i,
+                'occupe' => (bool) $billet,
+                'embarque' => (bool) $billet?->isBoarded(),
+                'statut' => $billet ? ($billet->isBoarded() ? 'embarque' : 'reserve') : 'libre',
+                'segment' => $billet ? ($billet->villeDepart?->ville . ' → ' . $billet->villeArrivee?->ville) : null,
+            ];
+        }
+
+        return [
+            'capacite' => $capacite,
+            'total_clients' => $totalClients,
+            'a_bord' => $aBord,
+            'restant_a_embarquer' => max(0, $totalClients - $aBord),
+            'taux_remplissage' => $capacite > 0 ? (int) min(100, round($totalClients * 100 / $capacite)) : 0,
+            'arrets' => $arretsStats,
+            'sieges' => $sieges,
+        ];
+    }
+
     protected static function booted(): void
     {
         // every voyage always has its departure and arrival stops, whatever created it (form, seeder, factory)

@@ -114,9 +114,18 @@
     </script>
 </x-admin.form-section>
 
-<x-admin.form-section title="Autocar et prix" description="Le nombre de places vendues dépend de la capacité de l'autocar." icon="bi-bus-front">
-    <x-admin.field type="select" name="autocar_id" label="Autocar" col="col-12" required
+@php
+    $chauffeurs = \App\Models\User::whereHas('roles', fn ($q) => $q->whereIn('slug', ['chauffeur', 'compagnie-chauffeur']))
+        ->orWhere('isadmin', 1)
+        ->orderBy('name')
+        ->pluck('name', 'id');
+@endphp
+
+<x-admin.form-section title="Autocar, chauffeur et prix" description="Le nombre de places vendues dépend de la capacité de l'autocar." icon="bi-bus-front">
+    <x-admin.field type="select" name="autocar_id" label="Autocar" col="col-md-6" required
                    :options="$autocars" empty="Choisir un autocar" :value="$voyage?->autocar_id" />
+    <x-admin.field type="select" name="chauffeur_id" label="Chauffeur assigné" col="col-md-6"
+                   :options="$chauffeurs" empty="Choisir un chauffeur (optionnel)" :value="$voyage?->chauffeur_id" />
     <x-admin.field type="number" name="prix" label="Prix du trajet complet" col="col-md-6" required suffix="DH"
                    min="0" step="0.01" placeholder="0,00" :value="$voyage?->prix" />
 </x-admin.form-section>

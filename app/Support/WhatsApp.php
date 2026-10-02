@@ -68,4 +68,55 @@ class WhatsApp
 
         return strlen($chiffres) >= 11 ? $chiffres : '';
     }
+
+    /**
+     * Checks if the phone number is a valid mobile capable of using WhatsApp.
+     * Moroccan landlines (05... or 2125...) return false because they cannot run WhatsApp.
+     */
+    public static function estMobileValide(?string $telephone): bool
+    {
+        if (! $telephone) {
+            return false;
+        }
+
+        $clean = preg_replace('/\D/', '', (string) $telephone);
+
+        // Moroccan landlines: 05... or 2125...
+        if (preg_match('/^(05|2125)/', $clean)) {
+            return false;
+        }
+
+        $normalise = self::numero($telephone);
+
+        return $normalise !== '' && (str_starts_with($normalise, '2126') || str_starts_with($normalise, '2127') || strlen($normalise) >= 11);
+    }
+
+    /**
+     * Validates whether WhatsApp can be used for the entered phone number.
+     * If the number is a landline or missing, provides an automatic fallback to email.
+     *
+     * @return array{possible: bool, canal: string, motif?: string, lien?: string}
+     */
+    public static function verifierDisponibilite(Reservation|Collection $billets, ?string $telephone = null): array
+    {
+        $tel = $telephone ?? ($billets instanceof Reservation ? ($billets->telephone ?? $billets->user?->telephone) : null);
+
+        if (! self::estMobileValide($tel)) {
+            \Illuminate\Support\Facades\Log::info("Numéro non mobile détecté ({$tel}) : WhatsApp non disponible, repli automatique vers confirmation par email.");
+
+            return [
+                'possible' => false,
+                'canal' => 'email',
+                'motif' => 'numero_non_mobile_ou_fixe',
+                'message' => __('Ce numéro ne semble pas disposer de WhatsApp (numéro fixe ou invalide). Votre billet reste garanti et envoyé par email.'),
+            ];
+        }
+
+        return [
+            'possible' => true,
+            'canal' => 'whatsapp',
+            'lien' => self::lien($billets, $tel),
+            'numero' => self::numero($tel),
+        ];
+    }
 }

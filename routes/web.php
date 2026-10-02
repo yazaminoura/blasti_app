@@ -21,6 +21,7 @@ use App\Http\Controllers\Admin\ApparenceController;
 use App\Http\Controllers\Admin\ExportController;
 use App\Http\Controllers\Admin\RoleController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Chauffeur\ChauffeurController;
 use App\Http\Controllers\Client\ReservationController as ClientReservationController;
 use App\Http\Controllers\Client\PaymentController;
 use App\Http\Controllers\Client\Profile\DashboardController as ProfileDashboardController;
@@ -286,6 +287,10 @@ Route::middleware('auth')->group(function () {
         Route::patch('/reservation/admin/{reservation}/embarquer', [ReservationController::class, 'embarquer'])->name('reservation.admin.embarquer');
         // passenger list of a bus (printable), for the controller / driver
         Route::get('/voyages/{voyage}/passagers', [VoyageController::class, 'passagers'])->name('voyages.passagers');
+        // Chauffeur operational space: timetable, stops, passenger counts (NO client secrets)
+        Route::get('/admin/chauffeur', [ChauffeurController::class, 'index'])->name('chauffeur.index');
+        Route::get('/admin/chauffeur/voyage/{voyage}', [ChauffeurController::class, 'show'])->name('chauffeur.show');
+        Route::post('/admin/chauffeur/voyage/{voyage}/retard', [ChauffeurController::class, 'retard'])->name('chauffeur.retard');
         // recurring trips: copy a voyage on chosen weekdays over a period
         Route::get('/voyages/{voyage}/programmer', [VoyageController::class, 'programmer'])->name('voyages.programmer');
         Route::post('/voyages/{voyage}/programmer', [VoyageController::class, 'programmerStore'])->name('voyages.programmer.store');

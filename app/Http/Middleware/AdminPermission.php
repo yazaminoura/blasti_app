@@ -58,6 +58,10 @@ class AdminPermission
         // cash is taken at the counter (bookings) or at the bus door (scanner)
         'reservation.admin.payer'      => ['reservations.update', 'scanner.use'],
         'voyages.passagers'            => ['voyages.read', 'scanner.use'],
+        // chauffeur dedicated operational space
+        'chauffeur.index'              => 'chauffeur.view',
+        'chauffeur.show'               => 'chauffeur.view',
+        'chauffeur.retard'             => 'chauffeur.view',
         // staff can only create client accounts (UserController::store), so the Clients right is enough
         'admin.users.create'           => ['utilisateurs.create', 'clients.create'],
         'admin.users.store'            => ['utilisateurs.create', 'clients.create'],
@@ -75,6 +79,7 @@ class AdminPermission
 
     /** Sections tried, in order, when a staff member without the dashboard permission logs in. */
     private const LANDING = [
+        'chauffeur.view'    => 'chauffeur.index',
         'reservations.read' => 'reservation.admin.index',
         'voyages.read'      => 'voyages.index',
         'autocars.read'     => 'autocars.index',

@@ -21,6 +21,7 @@ class StoreVoyageRequest extends FormRequest
             'ville_depart_id'  => 'required|exists:villes,id',
             'ville_arrivee_id' => 'required|exists:villes,id|different:ville_depart_id',
             'autocar_id'       => 'required|exists:autocars,id',
+            'chauffeur_id'     => 'nullable|exists:users,id',
             'type_voyage_id'   => 'required|exists:type_voyages,id',
             'prix'             => 'required|numeric|min:0',
             'image'            => 'nullable|image|mimes:jpeg,png,jpg,gif,webp|max:2048',

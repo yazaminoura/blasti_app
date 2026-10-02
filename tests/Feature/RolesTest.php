@@ -20,10 +20,10 @@ class RolesTest extends TestCase
         return $user;
     }
 
-    public function test_the_nine_roles_exist_after_migrate(): void
+    public function test_all_ready_made_roles_exist_after_migrate(): void
     {
         $this->assertSame(
-            ['compagnie', 'compagnie-controleur', 'comptable', 'controleur', 'directeur', 'guichetier', 'marketing', 'planning', 'service-client'],
+            ['chauffeur', 'compagnie', 'compagnie-chauffeur', 'compagnie-controleur', 'comptable', 'controleur', 'directeur', 'guichetier', 'marketing', 'planning', 'service-client'],
             Role::orderBy('slug')->pluck('slug')->all()
         );
     }

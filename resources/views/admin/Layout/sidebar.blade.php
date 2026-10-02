@@ -10,6 +10,7 @@
             ['reservations.create', 'reservation.admin.guichet', 'reservation.admin.guichet*', 'bi-shop-window', 'Guichet (vente)'],
             ['reservations.read', 'reservation.admin.index', ['reservation.admin.index', 'reservation.admin.show'], 'bi-ticket-perforated', 'Réservations'],
             ['scanner.use', 'reservation.admin.scanner', 'reservation.admin.scanner', 'bi-qr-code-scan', 'Scanner les billets'],
+            ['chauffeur.view', 'chauffeur.index', 'chauffeur.*', 'bi-compass', 'Espace Chauffeur'],
             ['voyages.read', 'voyages.index', 'voyages.*', 'bi-signpost-split', 'Voyages'],
             ['clients.read', 'admin.clients.index', 'admin.clients.*', 'bi-person-lines-fill', 'Clients'],
             ['promotions.read', 'promotions.index', 'promotions.*', 'bi-percent', 'Promotions'],

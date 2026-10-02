@@ -23,6 +23,16 @@
                             <h3 class="mb-1 text-{{ $tone }}">{{ $etat }}</h3>
                             <p class="text-muted mb-3">{{ __('Billet N° :id', ['id' => $r->id]) }}@if ($r->commande) · {{ $r->commande }}@endif</p>
 
+                            @if ($r->voyage?->estEnRetard())
+                                <div class="alert alert-warning text-start mb-3 d-flex gap-2 align-items-center">
+                                    <i class="isax isax-clock fs-20 text-warning"></i>
+                                    <div>
+                                        <div class="fw-bold">{{ __('Départ retardé de :min minutes', ['min' => $r->voyage->retard_minutes]) }}</div>
+                                        <div class="small text-muted">{{ $r->voyage->motif_retard ?? __('Conditions de circulation ou imprévu.') }} — {{ __('Nouvelle heure de départ estimée : :heure', ['heure' => $r->voyage->heureDepartEstimee()]) }}</div>
+                                    </div>
+                                </div>
+                            @endif
+
                             @if (! $r->isCancelled() && ! $parti && $aPayer > 0)
                                 <div class="alert alert-warning text-start d-flex gap-3 align-items-center mb-4">
                                     <i class="isax isax-money-send fs-24"></i>

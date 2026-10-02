@@ -19,6 +19,7 @@ class Droits
         'reservations.rembourser' => ['Rembourser un billet', 'Marquer un billet annulé comme remboursé.'],
         'finance.read' => ["Voir le chiffre d'affaires", "Les montants totaux du tableau de bord et de la liste des réservations."],
         'scanner.use' => ['Scanner et faire monter', "Scanner les billets, encaisser à la porte du bus, liste des passagers."],
+        'chauffeur.view' => ['Espace Chauffeur', 'Accéder au tableau de bord chauffeur (horaires, arrêts, passagers sans données privées).'],
     ];
 
     /** Every valid right name. */
@@ -49,6 +50,7 @@ class Droits
             'directeur' => ['Directeur', array_merge($crud(...$gestion), array_keys(self::SPECIAUX))],
             'guichetier' => ['Guichetier', ['dashboard.read', 'reservations.read', 'reservations.create', 'reservations.update', 'voyages.read', 'clients.read', 'clients.create']],
             'controleur' => ['Contrôleur', ['scanner.use']],
+            'chauffeur' => ['Chauffeur', ['chauffeur.view', 'voyages.read']],
             'service-client' => ['Service client', ['dashboard.read', 'reservations.read', 'reservations.update', 'reservations.delete', 'reservations.rembourser',
                 'voyages.read', 'clients.read', 'clients.update', 'avis.read', 'avis.update']],
             'planning' => ['Planning', array_merge(['dashboard.read'], $crud('voyages', 'autocars', 'villes', 'type voyages', 'equipements', 'options'), ['societes.read'])],
@@ -57,6 +59,7 @@ class Droits
             'compagnie' => ['Compagnie – Responsable', ['dashboard.read', 'finance.read', 'reservations.read', 'reservations.update', 'scanner.use',
                 'voyages.read', 'voyages.create', 'voyages.update', 'voyages.delete', 'autocars.read', 'autocars.create', 'autocars.update', 'avis.read']],
             'compagnie-controleur' => ['Compagnie – Contrôleur', ['scanner.use']],
+            'compagnie-chauffeur' => ['Compagnie – Chauffeur', ['chauffeur.view']],
         ];
     }
 }
