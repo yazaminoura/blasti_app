@@ -53,6 +53,8 @@ return [
     // a seller can correct their own counter sale (seat, mode, remove, cancel) for this long; later: refund right only
     'guichet_correction_minutes' => (int) env('SAFAR_GUICHET_CORRECTION_MINUTES', 30),
     'absences_max' => (int) env('SAFAR_ABSENCES_MAX', 2),
+    // Signed ticket QR code verification link expires this many days after trip arrival
+    'qr_expiration_jours' => (int) env('SAFAR_QR_EXPIRATION_JOURS', 7),
 
     // Return trip booked after an outbound order (same client, other way): % off the return (0 = no discount)
     'remise_retour_pourcent' => (float) env('SAFAR_REMISE_RETOUR', 10),

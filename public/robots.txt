@@ -1,2 +1,19 @@
 User-agent: *
-Disallow:
+Disallow: /admin/
+Disallow: /client/
+Disallow: /billet/
+Disallow: /commande/
+Disallow: /paiement/
+Disallow: /login
+Disallow: /register
+Disallow: /password/
+Disallow: /reservation/
+Allow: /
+Allow: /destinations
+Allow: /compagnies
+Allow: /aide
+Allow: /a-propos
+Allow: /contact
+Allow: /legal/
+
+Sitemap: /sitemap.xml

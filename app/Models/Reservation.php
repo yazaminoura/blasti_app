@@ -82,10 +82,16 @@ class Reservation extends Model
         return \Carbon\Carbon::parse(\Carbon\Carbon::parse($this->date_arrivee)->toDateString() . ' ' . $this->heure_arrivee);
     }
 
-    /** The trip is over and the client has not rated it yet (one review per ticket). */
+    /** The trip is over and the client has not rated it yet: only travellers (boarded, or paid if no scanner was used). */
     public function peutEtreNote(): bool
     {
-        return ! $this->isCancelled() && $this->arriveeAt()->isPast() && ! $this->avis()->exists();
+        if ($this->isCancelled() || $this->arriveeAt()->isFuture() || $this->avis()->exists()) {
+            return false;
+        }
+
+        $busScanne = static::where('voyage_id', $this->voyage_id)->whereNotNull('embarque_le')->exists();
+
+        return $this->isBoarded() || ($this->isPaid() && ! $busScanne);
     }
 
     /**
@@ -273,10 +279,16 @@ class Reservation extends Model
         return $code;
     }
 
-    /** Link opened by the QR code of the ticket (signed: it cannot be guessed from the ticket number). */
+    /** Link opened by the QR code of the ticket (signed, temporary: expires after the trip). */
     public function verificationUrl(): string
     {
-        return \Illuminate\Support\Facades\URL::signedRoute('ticket.verify', $this);
+        $jours = (int) config('safar.qr_expiration_jours', 7);
+
+        return \Illuminate\Support\Facades\URL::temporarySignedRoute(
+            'ticket.verify',
+            $this->arriveeAt()->addDays($jours),
+            $this
+        );
     }
 
     /** QR code of the ticket as an SVG data URI (works in the PDF and on the ticket page). */

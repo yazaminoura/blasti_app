@@ -312,7 +312,7 @@ class GuichetController extends Controller
     /** Typo at the counter: fix the passenger name printed on the ticket (same ticket, same QR code). */
     public function passager(Request $request, Reservation $reservation)
     {
-        abort_if($reservation->isCancelled() || $reservation->departAt()->isPast(), 403, 'Ce billet ne peut plus être modifié.');
+        abort_unless(self::peutCorriger($reservation, $request->user()), 403, 'Le délai de correction de cette vente est passé.');
         $data = $request->validate(['passager_nom' => ['required', 'string', 'max:120']], [
             'passager_nom.required' => 'Le nom du passager est obligatoire.',
         ]);

@@ -130,6 +130,7 @@ Artisan::command('reservations:agence', function () {
     $delai = (int) config('safar.agence_delai_heures');
     $cancelled = 0;
     Reservation::parCommande(Reservation::where('statut', Reservation::CONFIRMEE)->whereNull('paye_le')
+        ->whereDate('date_depart', '>=', today())
         ->whereHas('modeReglement', fn ($q) => $q->where('en_agence', true))
         ->where('created_at', '<', now()->subHours($delai)))
         ->each(function ($billets) use (&$cancelled) {

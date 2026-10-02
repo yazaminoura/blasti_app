@@ -77,6 +77,8 @@ class TicketChangeController extends Controller
         ]);
         $seat = (int) $request->seats[0];
 
+        $oldVoyageId = (int) $reservation->voyage_id;
+
         try {
             DB::transaction(function () use ($request, $reservation, $seat) {
                 $voyage = Voyage::with(['autocar', 'arrets'])->lockForUpdate()->findOrFail($request->voyage_id);
@@ -127,6 +129,11 @@ class TicketChangeController extends Controller
 
         $reservation->refresh();
         ReservationMail::sendTo($reservation, 'modifiee');
+
+        // a seat on the previous bus is free again: tell the people waiting for it ("Prévenez-moi")
+        if ($oldVoyageId && $oldVoyageId !== (int) $reservation->voyage_id) {
+            \App\Support\ApresReponse::executer(fn () => \App\Models\AlertePlace::notifier($oldVoyageId), 'alerte-places-' . $oldVoyageId);
+        }
 
         return redirect()->route('ticket.show', $reservation->id)->with('success', $reservation->resteAPayer() > 0 && $reservation->isPaid()
             ? __('Billet modifié ! Supplément de :montant DH à régler à l\'embarquement. Votre nouveau billet vous a été envoyé par e-mail.', ['montant' => number_format($reservation->resteAPayer(), 2, ',', ' ')])

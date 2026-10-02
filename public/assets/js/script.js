@@ -1,6 +1,5 @@
 /*
-Author       : DreamsTechnologies
-Template Name: DreamsTour - Bootstrap Template
+  Blasti — Application Scripts
 */
 
 (function () {

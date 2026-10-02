@@ -91,6 +91,34 @@ Route::get('/a-propos', [\App\Http\Controllers\PageController::class, 'aPropos']
 Route::get('/legal/{page}', [\App\Http\Controllers\PageController::class, 'legal'])->whereIn('page', ['conditions', 'confidentialite', 'mentions-legales'])->name('pages.legal');
 Route::post('/contact', [ContactController::class, 'store'])->middleware('throttle:5,1')->name('contact.store');
 
+// Dynamic XML sitemap for search engines
+Route::get('/sitemap.xml', function () {
+    $staticUrls = [
+        route('home') => ['freq' => 'daily', 'priority' => '1.0'],
+        route('pages.destinations') => ['freq' => 'weekly', 'priority' => '0.8'],
+        route('pages.compagnies') => ['freq' => 'weekly', 'priority' => '0.8'],
+        route('pages.aide') => ['freq' => 'monthly', 'priority' => '0.6'],
+        route('pages.apropos') => ['freq' => 'monthly', 'priority' => '0.5'],
+        route('contact') => ['freq' => 'monthly', 'priority' => '0.6'],
+        route('pages.legal', 'conditions') => ['freq' => 'yearly', 'priority' => '0.3'],
+        route('pages.legal', 'confidentialite') => ['freq' => 'yearly', 'priority' => '0.3'],
+        route('pages.legal', 'mentions-legales') => ['freq' => 'yearly', 'priority' => '0.3'],
+    ];
+
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
+    $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";
+    foreach ($staticUrls as $url => $meta) {
+        $xml .= "  <url>\n";
+        $xml .= '    <loc>' . htmlspecialchars($url, ENT_XML1, 'UTF-8') . "</loc>\n";
+        $xml .= "    <changefreq>{$meta['freq']}</changefreq>\n";
+        $xml .= "    <priority>{$meta['priority']}</priority>\n";
+        $xml .= "  </url>\n";
+    }
+    $xml .= '</urlset>';
+
+    return response($xml, 200)->header('Content-Type', 'application/xml');
+})->name('sitemap');
+
 Route::get('/voyages/list', [VoyageController::class, 'listVoyages'])->name('voyages.list');
 // Search results (home search form): public, login is only asked when booking
 Route::get('/client/voyages', [VoyageController::class, 'clientIndex'])->name('voyages.client.index');
@@ -127,10 +155,14 @@ Route::get('/lang/{locale}', function ($locale) {
     if (in_array($locale, ['en', 'fr', 'ar'])) {
         session(['locale' => $locale]);
     }
-    // Only go back to a page of this site (the Referer header could point anywhere)
+    // Only go back to a page of this site (prevent open redirect via malicious Referer)
     $previous = url()->previous();
+    $host = parse_url($previous, PHP_URL_HOST);
+    $path = parse_url($previous, PHP_URL_PATH) ?? '';
 
-    return str_starts_with($previous, url('/')) ? redirect()->to($previous) : redirect()->route('home');
+    return ($host && $host === request()->getHost() && ! str_starts_with($path, '/lang/'))
+        ? redirect()->to($previous)
+        : redirect()->route('home');
 })->name('lang.switch');
 
 // Breeze page kept as an alias (email verification redirects here): the client area is the real dashboard
