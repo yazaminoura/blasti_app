@@ -77,9 +77,16 @@
                                 <img src="{{ \App\Support\BrandImages::logoUrl() }}" alt="{{ config('safar.nom') }}" class="flex-shrink-0 mz-logo-light" style="max-height: 48px; width: auto; max-width: 160px; object-fit: contain;">
                                 <img src="{{ \App\Support\BrandImages::logoDarkUrl() }}" alt="{{ config('safar.nom') }}" class="flex-shrink-0 mz-logo-dark" style="max-height: 48px; width: auto; max-width: 160px; object-fit: contain;">
                             @elseif (! \App\Support\BrandImages::isDefaultBrand())
-                                <div class="d-flex align-items-center gap-2 flex-shrink-0 py-1">
-                                    <img src="{{ \App\Support\BrandImages::url('blasti-bus.png') }}" alt="{{ config('safar.nom') }}" style="height: 38px; width: auto;">
-                                    <span class="fs-4 fw-bold text-white">{{ config('safar.nom') }}</span>
+                                <div class="flex-shrink-0 py-1">
+                                    <span class="brand-stacked">
+                                        <img src="{{ \App\Support\BrandImages::url('blasti-hero-bus.png') }}" class="brand-bus-img" style="height: 34px; width: auto;" alt="{{ config('safar.nom') }}">
+                                        <span class="brand-logo-name" style="font-size: 14px; color: #FFFFFF;">{{ strtoupper(config('safar.nom')) }}</span>
+                                        <span class="brand-logo-line">
+                                            <span class="brand-line-left" style="background: rgba(255,255,255,0.85);"></span>
+                                            <span class="brand-line-accent" style="background: #F2690D;"></span>
+                                            <span class="brand-line-right" style="background: rgba(255,255,255,0.85);"></span>
+                                        </span>
+                                    </span>
                                 </div>
                             @else
                                 <img src="{{ \App\Support\BrandImages::url('blasti-logo.png') }}" alt="BLASTI" class="flex-shrink-0 mz-logo-light">

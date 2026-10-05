@@ -695,3 +695,54 @@
 .bl-lang-menu .bl-lang-item i { color: var(--brand); font-size: 16px; }
 [dir="rtl"] .bl-lang-menu .bl-lang-item img { margin-right: 0 !important; margin-left: .5rem; }
 .dark-mode .bl-lang-menu .bl-lang-item.active { background: #1d2a36; color: #fff; }
+
+/* Stacked Brand Logo layout (bus on top, name centered below, underline with accent below) */
+.brand-stacked {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1;
+  text-decoration: none;
+  vertical-align: middle;
+}
+.brand-stacked .brand-bus-img {
+  display: block;
+  width: auto;
+  max-width: 100%;
+  object-fit: contain;
+  margin: 0 auto;
+}
+.brand-stacked .brand-logo-name {
+  display: block;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  line-height: 1.1;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+.brand-stacked .brand-logo-line {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 92%;
+  max-width: 140px;
+  height: 3px;
+  margin-top: 2px;
+  gap: 3px;
+}
+.brand-stacked .brand-line-left,
+.brand-stacked .brand-line-right {
+  flex: 1;
+  height: 2px;
+  border-radius: 1px;
+}
+.brand-stacked .brand-line-accent {
+  width: 28%;
+  height: 3px;
+  background: #F2690D;
+  border-radius: 1px;
+}

@@ -698,22 +698,118 @@ a { text-decoration: none; }
 .h-100.sa-card { display: flex; flex-direction: column; }
 .h-100.sa-card > .sa-card-body { flex: 1; }
 
-/* BLASTI logo: normal version in light mode, white-text version in dark mode, bus alone in the collapsed rail */
+/* BLASTI logo: strict single-theme display, stacked bus+name+line, collapsed rail */
 .brand-logo-full .logo-on-dark,
-.brand-logo-full .logo-rail { display: none; }
-[data-bs-theme="dark"] .brand-logo-full .logo-on-light { display: none; }
-[data-bs-theme="dark"] .brand-logo-full .logo-on-dark { display: inline; }
-[data-bs-theme="dark"] .brand-logo-full span.logo-on-dark { display: inline-flex; }
-.sa-preview[data-bs-theme="light"] .brand-logo-full .logo-on-light { display: inline; }
-.sa-preview[data-bs-theme="light"] .brand-logo-full span.logo-on-light { display: inline-flex; }
-.sa-preview[data-bs-theme="light"] .brand-logo-full .logo-on-dark { display: none; }
-.sa-preview[data-bs-theme="dark"] .brand-logo-full .logo-on-light { display: none; }
-.sa-preview[data-bs-theme="dark"] .brand-logo-full .logo-on-dark { display: inline; }
-.sa-preview[data-bs-theme="dark"] .brand-logo-full span.logo-on-dark { display: inline-flex; }
+.brand-logo-full .logo-rail,
+.brand-logo .logo-on-dark { display: none !important; }
+
+.brand-logo-full .logo-on-light,
+.brand-logo .logo-on-light { display: inline-flex !important; }
+.brand-logo-full img.logo-on-light,
+.brand-logo img.logo-on-light { display: inline-block !important; }
+
+[data-bs-theme="dark"] .brand-logo-full .logo-on-light,
+[data-bs-theme="dark"] .brand-logo .logo-on-light { display: none !important; }
+
+[data-bs-theme="dark"] .brand-logo-full .logo-on-dark,
+[data-bs-theme="dark"] .brand-logo .logo-on-dark { display: inline-flex !important; }
+[data-bs-theme="dark"] .brand-logo-full img.logo-on-dark,
+[data-bs-theme="dark"] .brand-logo img.logo-on-dark { display: inline-block !important; }
+
+.sa-preview[data-bs-theme="light"] .brand-logo-full .logo-on-light,
+.sa-preview[data-bs-theme="light"] .brand-logo .logo-on-light { display: inline-flex !important; }
+.sa-preview[data-bs-theme="light"] .brand-logo-full img.logo-on-light,
+.sa-preview[data-bs-theme="light"] .brand-logo img.logo-on-light { display: inline-block !important; }
+.sa-preview[data-bs-theme="light"] .brand-logo-full .logo-on-dark,
+.sa-preview[data-bs-theme="light"] .brand-logo .logo-on-dark { display: none !important; }
+
+.sa-preview[data-bs-theme="dark"] .brand-logo-full .logo-on-light,
+.sa-preview[data-bs-theme="dark"] .brand-logo .logo-on-light { display: none !important; }
+.sa-preview[data-bs-theme="dark"] .brand-logo-full .logo-on-dark,
+.sa-preview[data-bs-theme="dark"] .brand-logo .logo-on-dark { display: inline-flex !important; }
+.sa-preview[data-bs-theme="dark"] .brand-logo-full img.logo-on-dark,
+.sa-preview[data-bs-theme="dark"] .brand-logo img.logo-on-dark { display: inline-block !important; }
+
 @media (min-width: 992px) {
     .sa-collapsed .sa-sidebar .brand-logo-full .logo-on-light,
-    .sa-collapsed .sa-sidebar .brand-logo-full .logo-on-dark { display: none !important; }
-    .sa-collapsed .sa-sidebar .brand-logo-full .logo-rail { display: inline !important; }
+    .sa-collapsed .sa-sidebar .brand-logo-full .logo-on-dark,
+    .sa-collapsed .sa-sidebar .brand-logo .logo-on-light,
+    .sa-collapsed .sa-sidebar .brand-logo .logo-on-dark { display: none !important; }
+    .sa-collapsed .sa-sidebar .brand-logo-full .logo-rail,
+    .sa-collapsed .sa-sidebar .brand-logo .logo-rail { display: inline-block !important; }
+}
+
+/* Stacked Brand Logo layout (bus on top, name centered below, underline with accent below) */
+.brand-stacked {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1;
+    text-decoration: none;
+    vertical-align: middle;
+}
+.brand-stacked .brand-bus-img {
+    display: block;
+    width: auto;
+    max-width: 100%;
+    object-fit: contain;
+    margin: 0 auto;
+}
+.brand-stacked .brand-logo-name {
+    display: block;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    line-height: 1.1;
+    margin-top: 2px;
+    white-space: nowrap;
+}
+.brand-stacked .brand-logo-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 92%;
+    max-width: 140px;
+    height: 3px;
+    margin-top: 2px;
+    gap: 3px;
+}
+.brand-stacked .brand-line-left,
+.brand-stacked .brand-line-right {
+    flex: 1;
+    height: 2px;
+    border-radius: 1px;
+}
+.brand-stacked .brand-line-accent {
+    width: 28%;
+    height: 3px;
+    background: #F2690D;
+    border-radius: 1px;
+}
+
+.logo-on-light.brand-stacked .brand-logo-name,
+.logo-on-light .brand-stacked .brand-logo-name {
+    color: #0A1F5C;
+}
+.logo-on-light.brand-stacked .brand-line-left,
+.logo-on-light.brand-stacked .brand-line-right,
+.logo-on-light .brand-stacked .brand-line-left,
+.logo-on-light .brand-stacked .brand-line-right {
+    background: var(--brand, #0B4FC4);
+}
+
+.logo-on-dark.brand-stacked .brand-logo-name,
+.logo-on-dark .brand-stacked .brand-logo-name {
+    color: #FFFFFF;
+}
+.logo-on-dark.brand-stacked .brand-line-left,
+.logo-on-dark.brand-stacked .brand-line-right,
+.logo-on-dark .brand-stacked .brand-line-left,
+.logo-on-dark .brand-stacked .brand-line-right {
+    background: rgba(255, 255, 255, 0.85);
 }
 
 /* ---------- Statistiques: 12 months bars ---------- */

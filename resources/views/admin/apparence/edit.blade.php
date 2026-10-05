@@ -158,7 +158,7 @@
         if (nameInput) {
             function updateName() {
                 var val = (nameInput.value || '').trim();
-                document.querySelectorAll('.brand-logo-text').forEach(function (el) { el.textContent = val || ' '; });
+                document.querySelectorAll('.brand-logo-text').forEach(function (el) { el.textContent = (val || ' ').toUpperCase(); });
                 var defaultBoxes = document.querySelectorAll('.logo-default-box');
                 var dynamicBoxes = document.querySelectorAll('.logo-dynamic-box');
                 if (defaultBoxes.length > 0 && dynamicBoxes.length > 0) {
