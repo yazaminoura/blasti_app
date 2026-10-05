@@ -33,11 +33,7 @@
                                         <span class="brand-stacked">
                                             <img src="{{ \App\Support\BrandImages::url('blasti-bus.png') }}" class="brand-bus-img" style="height: 30px; width: auto;" alt="{{ config('safar.nom') }}">
                                             <span class="brand-logo-name" style="font-size: 13px; color: #0A1F5C;">{{ strtoupper(config('safar.nom')) }}</span>
-                                            <span class="brand-logo-line">
-                                                <span class="brand-line-left" style="background: #0B4FC4;"></span>
-                                                <span class="brand-line-accent" style="background: #F2690D;"></span>
-                                                <span class="brand-line-right" style="background: #0B4FC4;"></span>
-                                            </span>
+                                            <span class="brand-logo-line"></span>
                                         </span>
                                     </a>
                                 @else
@@ -146,22 +142,14 @@
                                 <span class="brand-stacked">
                                     <img src="{{ \App\Support\BrandImages::url('blasti-bus.png') }}" class="brand-bus-img" style="height: 34px; width: auto;" alt="{{ config('safar.nom') }}">
                                     <span class="brand-logo-name" style="font-size: 14px; color: #0A1F5C;">{{ strtoupper(config('safar.nom')) }}</span>
-                                    <span class="brand-logo-line">
-                                        <span class="brand-line-left" style="background: #0B4FC4;"></span>
-                                        <span class="brand-line-accent" style="background: #F2690D;"></span>
-                                        <span class="brand-line-right" style="background: #0B4FC4;"></span>
-                                    </span>
+                                    <span class="brand-logo-line"></span>
                                 </span>
                             </a>
                             <a class="logo-dark header-logo text-decoration-none py-1" href="{{ route('home') }}">
                                 <span class="brand-stacked">
                                     <img src="{{ \App\Support\BrandImages::url('blasti-hero-bus.png') }}" class="brand-bus-img" style="height: 34px; width: auto;" alt="{{ config('safar.nom') }}">
                                     <span class="brand-logo-name" style="font-size: 14px; color: #FFFFFF;">{{ strtoupper(config('safar.nom')) }}</span>
-                                    <span class="brand-logo-line">
-                                        <span class="brand-line-left" style="background: rgba(255,255,255,0.85);"></span>
-                                        <span class="brand-line-accent" style="background: #F2690D;"></span>
-                                        <span class="brand-line-right" style="background: rgba(255,255,255,0.85);"></span>
-                                    </span>
+                                    <span class="brand-logo-line"></span>
                                 </span>
                             </a>
                         @else

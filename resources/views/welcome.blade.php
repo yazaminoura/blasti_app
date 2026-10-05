@@ -163,47 +163,112 @@
         @endif
         <div class="owl-carousel place-slider nav-center">
             @foreach ($voyages as $voyage)
-            <div class="place-item mb-4 position-relative">
-                <div class="place-img">
-                    <a href="{{ route('client.reservations.show', $voyage->id) }}">
-                        <img src="{{ $voyage->image ? asset('storage/' . $voyage->image) : ($voyage->autocar?->image ? asset('storage/' . $voyage->autocar->image) : ($voyage->villeArrivee?->photo_url ?? \App\Support\BrandImages::url('blasti-hero-bus-bg.png'))) }}" class="img-fluid" alt="{{ __($voyage->villeDepart->ville) }} → {{ __($voyage->villeArrivee->ville) }}">
+            @php
+                $cardImage = $voyage->image_url;
+                $defaultCardFallback = \App\Support\BrandImages::url('blasti-hero-bus-bg.png');
+                $placesRestantes = max(0, ($voyage->autocar?->nbr_siege ?? 0) - ($voyage->reservations_count ?? 0));
+                $duree = $voyage->dureeFormattee();
+                $detailUrl = route('client.reservations.show', $voyage->id);
+            @endphp
+            <div class="place-item mb-4">
+                {{-- Image Area with Aspect Ratio & Subtle Overlay --}}
+                <div class="place-img position-relative">
+                    <a href="{{ $detailUrl }}" class="d-block w-100 h-100 bl-img-link" tabindex="-1" aria-hidden="true">
+                        <img src="{{ $cardImage }}"
+                             class="img-fluid"
+                             alt="{{ __($voyage->villeDepart->ville) }} → {{ __($voyage->villeArrivee->ville) }}"
+                             loading="lazy"
+                             onerror="this.onerror=null; this.src='{{ $defaultCardFallback }}';">
                     </a>
+                    <div class="bl-img-gradient-overlay"></div>
                     <div class="fav-item-overlay">
+                        <span class="bl-departure-badge">
+                            <i class="isax isax-clock"></i>
+                            <span>{{ \Carbon\Carbon::parse($voyage->heure_depart)->format('H:i') }}</span>
+                        </span>
                         <a href="javascript:void(0);"
                            class="fav-icon wishlist-toggle {{ in_array($voyage->id, $wishlistIds) ? 'active' : '' }}"
-                           data-id="{{ $voyage->id }}">
+                           data-id="{{ $voyage->id }}"
+                           title="{{ __('Favoris') }}"
+                           aria-label="{{ __('Ajouter aux favoris') }}">
                             <i class="isax {{ in_array($voyage->id, $wishlistIds) ? 'isax-heart5 text-danger' : 'isax-heart' }}"></i>
                         </a>
-                        <span class="badge badge-warning badge-xs text-gray-9 fs-13 fw-medium rounded"><i class="isax isax-clock me-1"></i>{{ \Carbon\Carbon::parse($voyage->heure_depart)->format('H:i') }}</span>
                     </div>
                 </div>
-                <div class="place-content">
-                    <div class="flight-loc d-flex align-items-center justify-content-between mb-2">
-                        <span class="loc-name d-inline-flex align-items-center">
-                            <i class="isax isax-bus me-2"></i>{{ __($voyage->villeDepart->ville) }}
-                        </span>
-                        <span class="arrow-icon"><i class="isax isax-arrow-2"></i></span>
-                        <span class="loc-name d-inline-flex align-items-center">
-                            <i class="isax isax-location me-2"></i>{{ __($voyage->villeArrivee->ville) }}
-                        </span>
-                    </div>
-                    <h5 class="text-truncate mb-1">
-                        <a href="{{ route('client.reservations.show', $voyage->id) }}" class="stretched-link">{{ $voyage->autocar->societe->raison_social }}</a>
+
+                {{-- Card Content --}}
+                <div class="place-content d-flex flex-column flex-grow-1">
+                    {{-- Route Main Headline --}}
+                    <h5 class="bl-card-title mb-2">
+                        <a href="{{ $detailUrl }}" class="bl-route-link" title="{{ __($voyage->villeDepart->ville) }} → {{ __($voyage->villeArrivee->ville) }}">
+                            <span class="bl-city-name">{{ __($voyage->villeDepart->ville) }}</span>
+                            <span class="bl-arrow-separator"><i class="isax isax-arrow-right-1"></i></span>
+                            <span class="bl-city-name">{{ __($voyage->villeArrivee->ville) }}</span>
+                        </a>
                     </h5>
-                    <div class="date-info p-2 mb-3">
-                        <p class="d-flex align-items-center">
-                            <i class="isax isax-calendar-2 me-2"></i>{{ \Carbon\Carbon::parse($voyage->date_depart)->format('d/m/Y') }} · {{ \Carbon\Carbon::parse($voyage->heure_depart)->format('H:i') }} → {{ \Carbon\Carbon::parse($voyage->heure_arrivee)->format('H:i') }}
-                        </p>
+
+                    {{-- Company and Autocar Pill --}}
+                    <div class="bl-card-subtitle d-flex align-items-center justify-content-between mb-2">
+                        <span class="bl-company-name text-truncate">
+                            <i class="isax isax-bus me-1 text-primary"></i>
+                            <span>{{ $voyage->autocar?->societe?->raison_social ?? __('Compagnie partenaire') }}</span>
+                        </span>
+                        @if ($voyage->autocar?->classe)
+                            <span class="badge bl-class-badge">{{ $voyage->autocar->classe }}</span>
+                        @elseif ($voyage->typeVoyage)
+                            <span class="badge bl-class-badge">{{ $voyage->typeVoyage->type_voyage }}</span>
+                        @endif
                     </div>
-                    <div class="d-flex align-items-center justify-content-between border-top pt-3">
-                        <h6 class="text-primary"><span class="fs-14 fw-normal text-default">{{ __('À partir de ') }}</span> {{ number_format($voyage->prixActuel(), 0, ',', ' ') }} {{ __('DHS') }}</h6>
-                        <div class="d-flex align-items-center">
-                            @php $placesRestantes = max(0, $voyage->autocar->nbr_siege - $voyage->reservations_count); @endphp
-                            @if ($placesRestantes > 0)
-                                <span class="badge bg-outline-success fs-10 fw-medium me-2">{{ $placesRestantes }} {{ __('Places restantes') }}</span>
-                            @else
-                                <span class="badge bg-danger fs-10 fw-medium me-2">{{ __('Complet') }}</span>
+
+                    {{-- Timing and Duration Info Box --}}
+                    <div class="bl-card-timing mb-3">
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-1">
+                            <div class="d-flex align-items-center gap-1 bl-timing-schedule">
+                                <i class="isax isax-calendar-2 text-primary"></i>
+                                <span class="fw-medium">{{ \Carbon\Carbon::parse($voyage->date_depart)->format('d/m/Y') }}</span>
+                                <span class="text-muted mx-1">·</span>
+                                <span class="fw-semibold text-dark bl-timing-hours">{{ \Carbon\Carbon::parse($voyage->heure_depart)->format('H:i') }} → {{ \Carbon\Carbon::parse($voyage->heure_arrivee)->format('H:i') }}</span>
+                            </div>
+                            @if (!empty($duree))
+                                <span class="bl-duration-pill">
+                                    <i class="isax isax-timer-1"></i>
+                                    <span>{{ $duree }}</span>
+                                </span>
                             @endif
+                        </div>
+                    </div>
+
+                    {{-- Footer: Price + Smart Seats Badge + CTA Button --}}
+                    <div class="bl-card-footer mt-auto pt-3 border-top d-flex align-items-center justify-content-between gap-2">
+                        <div class="bl-price-block">
+                            <span class="bl-price-label text-muted d-block">{{ __('À partir de') }}</span>
+                            <div class="bl-price-val text-primary fw-bold">
+                                <span>{{ number_format($voyage->prixActuel(), 0, ',', ' ') }}</span>
+                                <span class="bl-currency">{{ __('DHS') }}</span>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-center gap-2">
+                            @if ($placesRestantes > 5)
+                                <span class="badge bl-seat-badge bl-seat-available" title="{{ __(':n places disponibles', ['n' => $placesRestantes]) }}">
+                                    <i class="isax isax-tick-circle"></i>
+                                    <span>{{ $placesRestantes }} {{ __('places') }}</span>
+                                </span>
+                            @elseif ($placesRestantes > 0)
+                                <span class="badge bl-seat-badge bl-seat-low" title="{{ __(':n places restantes', ['n' => $placesRestantes]) }}">
+                                    <i class="isax isax-warning-2"></i>
+                                    <span>{{ $placesRestantes }} {{ $placesRestantes > 1 ? __('places') : __('place') }}</span>
+                                </span>
+                            @else
+                                <span class="badge bl-seat-badge bl-seat-full">
+                                    {{ __('Complet') }}
+                                </span>
+                            @endif
+
+                            <a href="{{ $detailUrl }}" class="btn btn-primary btn-sm rounded-pill bl-book-btn">
+                                <span>{{ __('Réserver') }}</span>
+                                <i class="isax isax-arrow-right-3 ms-1"></i>
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -272,7 +337,8 @@
                     <div class="col-lg-3 col-md-4 col-sm-6">
                         <a href="{{ route('voyages.client.index', ['ville_arrivee' => $ville->id]) }}" class="location-wrap d-block position-relative">
                             @if ($ville->photo_url)
-                                <img src="{{ $ville->photo_url }}" alt="{{ __($ville->ville) }}" loading="lazy" style="height: 250px; object-fit: cover; width: 100%;">
+                                <img src="{{ $ville->photo_url }}" alt="{{ __($ville->ville) }}" loading="lazy" style="height: 250px; object-fit: cover; width: 100%;"
+                                     onerror="this.onerror=null; this.src='{{ \App\Support\BrandImages::url('blasti-hero-bus-bg.png') }}';">
                             @else
                                 {{-- No photo yet (the admin can add one in Villes): branded tile instead of a wrong picture --}}
                                 <div class="d-flex align-items-center justify-content-center text-white fw-bold fs-3"

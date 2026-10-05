@@ -29,8 +29,7 @@
             $via = $voyage->arrets->filter(fn ($s) => $s->ordre > $segA->ordre && $s->ordre < $segB->ordre);
             $bookUrl = route('client.reservations.show', ['voyage' => $voyage->id, 'de' => $segA->id, 'a' => $segB->id]);
             // voyage photo > bus photo > destination city photo > branded tile (never a wrong city)
-            $voyageImage = $voyage->image ? asset('storage/' . $voyage->image)
-                : ($voyage->autocar?->image ? asset('storage/' . $voyage->autocar->image) : $voyage->villeArrivee?->photo_url);
+            $voyageImage = $voyage->image_url;
         @endphp
         <div class="card voyage-card mb-4 border-0 shadow-sm overflow-hidden">
             <div class="row g-0 h-100">
@@ -38,7 +37,7 @@
                     <div class="voyage-img-wrapper h-100 position-relative">
                         <a href="{{ $bookUrl }}" class="d-block h-100">
                             @if ($voyageImage)
-                                <img src="{{ $voyageImage }}" class="img-fluid h-100 w-100 object-fit-cover" alt="{{ __($voyage->villeArrivee?->ville ?? '') }}" loading="lazy">
+                                <img src="{{ $voyageImage }}" class="img-fluid h-100 w-100 object-fit-cover" alt="{{ __($voyage->villeArrivee?->ville ?? '') }}" loading="lazy" onerror="this.onerror=null; this.src='{{ \App\Support\BrandImages::url('blasti-hero-bus-bg.png') }}';">
                             @else
                                 <div class="h-100 w-100 d-flex flex-column align-items-center justify-content-center text-white" style="min-height: 170px; background: radial-gradient(300px 120px at 100% 0%, rgba(var(--accent-rgb),.45), transparent 70%), linear-gradient(135deg, var(--brand-900), var(--brand));">
                                     <i class="isax isax-bus" style="font-size: 2.2rem; opacity: .8;"></i>

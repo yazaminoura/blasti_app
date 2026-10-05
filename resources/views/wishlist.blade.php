@@ -40,7 +40,7 @@
                                     <div class="place-item shadow-sm border-0 rounded-4 overflow-hidden bg-white h-100">
                                         <div class="place-img position-relative">
                                             <a href="{{ route('voyage.detail', ['id' => $item->voyage->id]) }}">
-                                                <img src="{{ asset('storage/' . $item->voyage->autocar->image) }}" class="img-fluid w-100" alt="{{ __('img') }}" style="height: 200px; object-fit: cover;">
+                                                <img src="{{ $item->voyage->image_url }}" class="img-fluid w-100" alt="{{ __($item->voyage->villeDepart->ville) }} → {{ __($item->voyage->villeArrivee->ville) }}" style="height: 200px; object-fit: cover;" onerror="this.onerror=null; this.src='{{ \App\Support\BrandImages::url('blasti-hero-bus-bg.png') }}';">
                                             </a>
                                             <div class="fav-item position-absolute top-0 end-0 p-3">
                                                 <a href="javascript:void(0);" class="fav-icon wishlist-toggle active" data-id="{{ $item->voyage->id }}">

@@ -24,11 +24,39 @@ class Ville extends Model
         'Oujda' => 'assets/img/citys/Ville-Oujda-Maroc.jpg',
     ];
 
+    /**
+     * Resolves an image path into a proper public URL.
+     * Correctly handles relative paths, avoids prepending /storage/ twice,
+     * supports bundled assets, external URLs, and points to the public storage disk.
+     */
+    public static function resolveImageUrl(?string $image): ?string
+    {
+        if (! $image) {
+            return null;
+        }
+
+        $img = trim($image);
+
+        if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+            return $img;
+        }
+
+        if (str_starts_with($img, 'assets/') || str_starts_with($img, '/assets/')) {
+            return asset(ltrim($img, '/'));
+        }
+
+        // Avoid prepending '/storage/' twice if already stored as 'storage/...' or '/storage/...'
+        $path = preg_replace('#^/?storage/#', '', $img);
+        $path = ltrim($path, '/');
+
+        return asset('storage/' . $path);
+    }
+
     /** URL of the city photo, or null when there is none (the view then shows a plain tile). */
     public function getPhotoUrlAttribute(): ?string
     {
         if ($this->image) {
-            return asset('storage/' . $this->image);
+            return self::resolveImageUrl($this->image);
         }
 
         return isset(self::BUNDLED_IMAGES[$this->ville]) ? asset(self::BUNDLED_IMAGES[$this->ville]) : null;

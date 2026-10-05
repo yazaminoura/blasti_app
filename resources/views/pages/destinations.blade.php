@@ -20,7 +20,8 @@
                         <div class="card h-100 overflow-hidden border-0 shadow-sm">
                             <a href="{{ route('voyages.client.index', ['ville_depart' => $ville->id]) }}" class="d-block position-relative">
                                 @if ($ville->photo_url)
-                                    <img src="{{ $ville->photo_url }}" alt="{{ __($ville->ville) }}" loading="lazy" style="height: 190px; width: 100%; object-fit: cover;">
+                                    <img src="{{ $ville->photo_url }}" alt="{{ __($ville->ville) }}" loading="lazy" style="height: 190px; width: 100%; object-fit: cover;"
+                                         onerror="this.onerror=null; this.src='{{ \App\Support\BrandImages::url('blasti-hero-bus-bg.png') }}';">
                                 @else
                                     <div class="d-flex align-items-center justify-content-center text-white" style="height: 190px; background: linear-gradient(135deg, var(--brand-900), var(--brand));">
                                         <i class="isax isax-location" style="font-size: 3rem; opacity: .4;"></i>

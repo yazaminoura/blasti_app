@@ -3,15 +3,12 @@
         <h1 class="showVoyageSociete">{{ __('Voyages pour :societe Transport :', ['societe' => $societe->raison_social]) }} </h1>
         <div class="row">
             @forelse ($voyages as $voyage)
-                @php
-                    $image = $voyage->image ?: $voyage->autocar?->image;
-                @endphp
                 <div class="col-xxl-4 col-lg-6 col-md-6 col-12 mb-4">
                     <div class="card authentication-card">
                         <div class="card-body">
                             <div class="place-item mb-4">
                                 <div class="place-img">
-                                    <img src="{{ $image ? asset('storage/' . $image) : asset('assets/img/photo1.png') }}" class="img-fluid" alt="{{ __('img') }}">
+                                    <img src="{{ $voyage->image_url }}" class="img-fluid" alt="{{ __($voyage->villeDepart?->ville ?? '') }} → {{ __($voyage->villeArrivee?->ville ?? '') }}" onerror="this.onerror=null; this.src='{{ \App\Support\BrandImages::url('blasti-hero-bus-bg.png') }}';">
                                 </div>
                                 <div class="place-content">
                                     <div class="flight-loc d-flex align-items-center justify-content-between mb-2">

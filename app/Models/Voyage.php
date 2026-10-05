@@ -76,6 +76,56 @@ class Voyage extends Model
         return \Carbon\Carbon::parse(\Carbon\Carbon::parse($this->date_arrivee)->toDateString() . ' ' . $this->heure_arrivee);
     }
 
+    /** Returns formatted duration like '2h30' or '45 min' */
+    public function dureeFormattee(): string
+    {
+        try {
+            $depart = $this->departAt();
+            $arrivee = $this->arriveeAt();
+            $diffMinutes = $depart->diffInMinutes($arrivee);
+            if ($diffMinutes <= 0) {
+                return '';
+            }
+            $hours = intdiv($diffMinutes, 60);
+            $minutes = $diffMinutes % 60;
+            if ($hours > 0 && $minutes > 0) {
+                return "{$hours}h" . sprintf('%02d', $minutes);
+            } elseif ($hours > 0) {
+                return "{$hours}h";
+            }
+            return "{$minutes} min";
+        } catch (\Throwable $e) {
+            return '';
+        }
+    }
+
+    /**
+     * Resolves the display image for a voyage:
+     * voyage specific image > autocar image > destination city photo > default bus illustration.
+     */
+    public function getImageUrlAttribute(): string
+    {
+        if ($this->image) {
+            $url = Ville::resolveImageUrl($this->image);
+            if ($url) {
+                return $url;
+            }
+        }
+
+        if ($this->autocar?->image) {
+            $url = Ville::resolveImageUrl($this->autocar->image);
+            if ($url) {
+                return $url;
+            }
+        }
+
+        if ($this->villeArrivee?->photo_url) {
+            return $this->villeArrivee->photo_url;
+        }
+
+        return \App\Support\BrandImages::url('blasti-hero-bus-bg.png');
+    }
+
     // ================= Stops and segments =================
 
     /** The first and last stops always mirror the voyage's departure and arrival fields. */

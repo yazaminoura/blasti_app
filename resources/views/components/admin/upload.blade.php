@@ -7,7 +7,7 @@
     <div class="sa-upload">
         <div class="sa-upload-preview {{ $contain ? 'contain' : '' }}" id="{{ $previewId }}">
             @if ($current)
-                <img src="{{ asset('storage/' . $current) }}" alt="">
+                <img src="{{ \App\Models\Ville::resolveImageUrl($current) }}" alt="">
             @else
                 <i class="bi {{ $icon }}"></i>
             @endif

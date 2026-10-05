@@ -23,20 +23,12 @@
                 <span class="logo-on-light brand-stacked">
                     <img src="{{ \App\Support\BrandImages::url('blasti-bus.png') }}" alt="{{ $nom }}" class="brand-bus-img" style="height: {{ $busH }}px; width: auto;">
                     <span class="brand-logo-name brand-logo-text" style="font-size: {{ $fontS }}px;">{{ strtoupper($nom) }}</span>
-                    <span class="brand-logo-line">
-                        <span class="brand-line-left"></span>
-                        <span class="brand-line-accent"></span>
-                        <span class="brand-line-right"></span>
-                    </span>
+                    <span class="brand-logo-line"></span>
                 </span>
                 <span class="logo-on-dark brand-stacked">
                     <img src="{{ \App\Support\BrandImages::url('blasti-hero-bus.png') }}" alt="{{ $nom }}" class="brand-bus-img" style="height: {{ $busH }}px; width: auto;">
                     <span class="brand-logo-name brand-logo-text" style="font-size: {{ $fontS }}px;">{{ strtoupper($nom) }}</span>
-                    <span class="brand-logo-line">
-                        <span class="brand-line-left"></span>
-                        <span class="brand-line-accent"></span>
-                        <span class="brand-line-right"></span>
-                    </span>
+                    <span class="brand-logo-line"></span>
                 </span>
             </span>
             <img src="{{ \App\Support\BrandImages::url('blasti-bus.png') }}" alt="{{ $nom }}" class="logo-rail" style="height: 26px; width: auto;">
