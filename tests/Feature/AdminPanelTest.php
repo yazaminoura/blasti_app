@@ -13,6 +13,8 @@ use App\Models\User;
 use App\Models\Ville;
 use App\Models\Voyage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminPanelTest extends TestCase
@@ -224,5 +226,96 @@ class AdminPanelTest extends TestCase
         $this->actingAs($staff)->get(route('admin.apparence.edit'))->assertForbidden();
         $this->actingAs($staff)->put(route('admin.apparence.update'), ['nom' => 'X', 'couleur' => '#000000'])->assertForbidden();
         $this->actingAs($staff)->get(route('admin'))->assertDontSee(route('admin.apparence.edit'));
+    }
+
+    public function test_admin_can_switch_language_and_admin_interface_is_localized(): void
+    {
+        // Switch to Arabic
+        $this->actingAs($this->superAdmin)
+            ->get(route('lang.switch', 'ar'))
+            ->assertSessionHas('locale', 'ar');
+
+        $this->actingAs($this->superAdmin)
+            ->withSession(['locale' => 'ar'])
+            ->get(route('admin'))
+            ->assertOk()
+            ->assertSee('dir="rtl"', false)
+            ->assertSee('لوحة التحكم')
+            ->assertSee('الحجوزات');
+
+        // Switch to English
+        $this->actingAs($this->superAdmin)
+            ->get(route('lang.switch', 'en'))
+            ->assertSessionHas('locale', 'en');
+
+        $this->actingAs($this->superAdmin)
+            ->withSession(['locale' => 'en'])
+            ->get(route('admin'))
+            ->assertOk()
+            ->assertSee('dir="ltr"', false)
+            ->assertSee('Dashboard')
+            ->assertSee('Reservations');
+    }
+
+    public function test_super_admin_can_upload_and_delete_custom_logo(): void
+    {
+        Storage::fake('public');
+
+        $file = UploadedFile::fake()->image('custom_logo.png', 200, 60);
+
+        $this->actingAs($this->superAdmin)
+            ->put(route('admin.apparence.update'), [
+                'nom' => 'Safar Express',
+                'couleur' => '#0F766E',
+                'logo' => $file,
+            ])
+            ->assertRedirect(route('admin.apparence.edit'));
+
+        $parametre = \App\Models\Parametre::actuel();
+        $this->assertNotNull($parametre->logo);
+        Storage::disk('public')->assertExists($parametre->logo);
+
+        \App\Models\Parametre::appliquerALaConfig();
+        $this->assertTrue(\App\Support\BrandImages::hasCustomLogo());
+        $this->assertEquals(asset('storage/' . $parametre->logo), \App\Support\BrandImages::logoUrl());
+
+        // Admin page displays the custom logo URL
+        $this->actingAs($this->superAdmin)
+            ->get(route('admin'))
+            ->assertOk()
+            ->assertSee($parametre->logo);
+
+        // Now remove the custom logo
+        $this->actingAs($this->superAdmin)
+            ->put(route('admin.apparence.update'), [
+                'nom' => 'Safar Express',
+                'couleur' => '#0F766E',
+                'supprimer_logo' => 1,
+            ])
+            ->assertRedirect(route('admin.apparence.edit'));
+
+        $parametre->refresh();
+        $this->assertNull($parametre->logo);
+        \App\Models\Parametre::appliquerALaConfig();
+        $this->assertFalse(\App\Support\BrandImages::hasCustomLogo());
+    }
+
+    public function test_when_nom_is_changed_without_custom_logo_dynamic_brand_is_displayed(): void
+    {
+        $this->actingAs($this->superAdmin)
+            ->put(route('admin.apparence.update'), [
+                'nom' => 'TransAtlas',
+                'couleur' => '#0B4FC4',
+            ])
+            ->assertRedirect(route('admin.apparence.edit'));
+
+        \App\Models\Parametre::appliquerALaConfig();
+        $this->assertFalse(\App\Support\BrandImages::isDefaultBrand());
+
+        $this->actingAs($this->superAdmin)
+            ->get(route('admin'))
+            ->assertOk()
+            ->assertSee('TransAtlas')
+            ->assertSee('brand-logo-text');
     }
 }

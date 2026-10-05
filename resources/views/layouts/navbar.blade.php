@@ -21,12 +21,26 @@
                     <div class="offcanvas-detail">
                         <div class="offcanvas-head">
                             <div class="d-flex justify-content-between align-items-center mb-3">
-                                <a href="{{ route('home') }}" class="black-logo-responsive">
-                                    <img src="{{ \App\Support\BrandImages::url('blasti-logo.png') }}" alt="Blasti" style="height: 48px; width: auto;">
-                                </a>
-                                <a href="{{ route('home') }}" class="white-logo-responsive">
-                                    <img src="{{ \App\Support\BrandImages::url('blasti-logo-dark.png') }}" alt="Blasti" style="height: 48px; width: auto;">
-                                </a>
+                                @if (\App\Support\BrandImages::hasCustomLogo())
+                                    <a href="{{ route('home') }}" class="black-logo-responsive">
+                                        <img src="{{ \App\Support\BrandImages::logoUrl() }}" alt="{{ config('safar.nom') }}" style="height: 48px; width: auto; max-width: 160px; object-fit: contain;">
+                                    </a>
+                                    <a href="{{ route('home') }}" class="white-logo-responsive">
+                                        <img src="{{ \App\Support\BrandImages::logoDarkUrl() }}" alt="{{ config('safar.nom') }}" style="height: 48px; width: auto; max-width: 160px; object-fit: contain;">
+                                    </a>
+                                @elseif (! \App\Support\BrandImages::isDefaultBrand())
+                                    <a href="{{ route('home') }}" class="d-flex align-items-center gap-2 text-decoration-none py-1">
+                                        <img src="{{ \App\Support\BrandImages::url('blasti-bus.png') }}" alt="{{ config('safar.nom') }}" style="height: 38px; width: auto;">
+                                        <span class="fs-4 fw-bold text-dark">{{ config('safar.nom') }}</span>
+                                    </a>
+                                @else
+                                    <a href="{{ route('home') }}" class="black-logo-responsive">
+                                        <img src="{{ \App\Support\BrandImages::url('blasti-logo.png') }}" alt="Blasti" style="height: 48px; width: auto;">
+                                    </a>
+                                    <a href="{{ route('home') }}" class="white-logo-responsive">
+                                        <img src="{{ \App\Support\BrandImages::url('blasti-logo-dark.png') }}" alt="Blasti" style="height: 48px; width: auto;">
+                                    </a>
+                                @endif
                                 <div class="offcanvas-close">
                                     <i class="fa-solid fa-xmark"></i>
                                 </div>
@@ -113,12 +127,26 @@
             <div class="header-nav">
                 <div class="main-menu-wrapper">
                     <div class="navbar-logo">
-                        <a class="logo-white header-logo" href="{{ route('home') }}">
-                            <img src="{{ \App\Support\BrandImages::url('blasti-logo.png') }}" style="height: 58px; width: auto;" class="logo" alt="Blasti">
-                        </a>
-                        <a class="logo-dark header-logo" href="{{ route('home') }}">
-                            <img src="{{ \App\Support\BrandImages::url('blasti-logo-dark.png') }}" style="height: 58px; width: auto;" class="logo" alt="Blasti">
-                        </a>
+                        @if (\App\Support\BrandImages::hasCustomLogo())
+                            <a class="logo-white header-logo" href="{{ route('home') }}">
+                                <img src="{{ \App\Support\BrandImages::logoUrl() }}" style="height: 48px; width: auto; max-width: 180px; object-fit: contain;" class="logo" alt="{{ config('safar.nom') }}">
+                            </a>
+                            <a class="logo-dark header-logo" href="{{ route('home') }}">
+                                <img src="{{ \App\Support\BrandImages::logoDarkUrl() }}" style="height: 48px; width: auto; max-width: 180px; object-fit: contain;" class="logo" alt="{{ config('safar.nom') }}">
+                            </a>
+                        @elseif (! \App\Support\BrandImages::isDefaultBrand())
+                            <a class="header-logo d-flex align-items-center gap-2 text-decoration-none py-1" href="{{ route('home') }}">
+                                <img src="{{ \App\Support\BrandImages::url('blasti-bus.png') }}" style="height: 42px; width: auto;" alt="{{ config('safar.nom') }}">
+                                <span class="fs-3 fw-bold text-dark">{{ config('safar.nom') }}</span>
+                            </a>
+                        @else
+                            <a class="logo-white header-logo" href="{{ route('home') }}">
+                                <img src="{{ \App\Support\BrandImages::url('blasti-logo.png') }}" style="height: 58px; width: auto;" class="logo" alt="Blasti">
+                            </a>
+                            <a class="logo-dark header-logo" href="{{ route('home') }}">
+                                <img src="{{ \App\Support\BrandImages::url('blasti-logo-dark.png') }}" style="height: 58px; width: auto;" class="logo" alt="Blasti">
+                            </a>
+                        @endif
                     </div>
                     <nav id="mobile-menu">
                         <ul class="main-nav">

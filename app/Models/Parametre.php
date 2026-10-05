@@ -13,13 +13,14 @@ class Parametre extends Model
 {
     protected $table = 'parametres';
 
-    protected $fillable = ['nom', 'couleur', 'telephone', 'email', 'adresse', 'facebook', 'instagram', 'tiktok', 'x', 'linkedin', 'majorations'];
+    protected $fillable = ['nom', 'couleur', 'logo', 'logo_dark', 'telephone', 'email', 'adresse', 'facebook', 'instagram', 'tiktok', 'x', 'linkedin', 'majorations'];
 
     protected $casts = ['majorations' => 'array'];
 
     /** Column => config key (empty columns keep the .env / config default). */
     public const CONFIG = [
         'nom' => 'safar.nom', 'couleur' => 'safar.couleur',
+        'logo' => 'safar.logo', 'logo_dark' => 'safar.logo_dark',
         'telephone' => 'safar.contact.telephone', 'email' => 'safar.contact.email', 'adresse' => 'safar.contact.adresse',
         'facebook' => 'safar.social.facebook', 'instagram' => 'safar.social.instagram', 'tiktok' => 'safar.social.tiktok',
         'x' => 'safar.social.x', 'linkedin' => 'safar.social.linkedin',
@@ -43,7 +44,9 @@ class Parametre extends Model
         }
 
         foreach (self::CONFIG as $champ => $cle) {
-            if (filled($ligne->$champ ?? null)) {
+            if (in_array($champ, ['logo', 'logo_dark'], true)) {
+                config([$cle => $ligne->$champ ?? null]);
+            } elseif (filled($ligne->$champ ?? null)) {
                 config([$cle => $ligne->$champ]);
             }
         }

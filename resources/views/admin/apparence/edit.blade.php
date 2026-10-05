@@ -11,10 +11,27 @@
 
 <div class="row g-4 align-items-start">
     <div class="col-xl-7">
-        <x-admin.form :action="route('admin.apparence.update')" method="PUT" style="max-width: none;" submit="Enregistrer l'apparence"
+        <x-admin.form :action="route('admin.apparence.update')" method="PUT" :files="true" style="max-width: none;" submit="Enregistrer l'apparence"
                       hint="Appliqué à tout le site dès l'enregistrement.">
-            <x-admin.form-section title="Nom affiché" description="Dans le titre des onglets et le pied de page (le logo contient déjà « BLASTI »)." icon="bi-type">
+            <x-admin.form-section title="Nom affiché" description="Nom de votre plateforme (affiché dans le logo, l'en-tête, les onglets et les e-mails)." icon="bi-type">
                 <x-admin.field name="nom" label="Nom" col="col-md-8" required maxlength="60" :value="$parametre->nom ?: config('safar.nom')" data-sa-name />
+            </x-admin.form-section>
+
+            <x-admin.form-section title="Logo de la plateforme" description="Téléversez votre propre image de logo ou laissez vide pour utiliser le logo automatique avec le nom saisi." icon="bi-image">
+                <div class="row g-3">
+                    <x-admin.upload name="logo" label="Logo principal (fond clair)" :current="$parametre->logo" hint="PNG, SVG, WEBP ou JPG (recommandé : transparent, hauteur 40-60 px)." col="col-md-6" :contain="true" />
+                    <x-admin.upload name="logo_dark" label="Logo fond sombre (optionnel)" :current="$parametre->logo_dark" hint="Optionnel : version blanche ou claire pour les fonds sombres." col="col-md-6" :contain="true" />
+                    @if ($parametre->logo || $parametre->logo_dark)
+                        <div class="col-12 mt-2">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="supprimer_logo" id="supprimer_logo" value="1">
+                                <label class="form-check-label text-danger small fw-semibold" for="supprimer_logo">
+                                    <i class="bi bi-trash3 me-1"></i> Supprimer le logo personnalisé et revenir au logo automatique
+                                </label>
+                            </div>
+                        </div>
+                    @endif
+                </div>
             </x-admin.form-section>
 
             <div class="sa-form-section" style="grid-template-columns: 1fr;">
@@ -139,9 +156,19 @@
             apply(hex);
         });
         if (nameInput) {
-            nameInput.addEventListener('input', function () {
-                document.querySelectorAll('.brand-logo-text').forEach(function (el) { el.textContent = nameInput.value || ' '; });
-            });
+            function updateName() {
+                var val = (nameInput.value || '').trim();
+                document.querySelectorAll('.brand-logo-text').forEach(function (el) { el.textContent = val || ' '; });
+                var defaultBoxes = document.querySelectorAll('.logo-default-box');
+                var dynamicBoxes = document.querySelectorAll('.logo-dynamic-box');
+                if (defaultBoxes.length > 0 && dynamicBoxes.length > 0) {
+                    var isBlasti = val.toLowerCase() === 'blasti' || val === '';
+                    defaultBoxes.forEach(function (b) { b.classList.toggle('d-none', !isBlasti); });
+                    dynamicBoxes.forEach(function (b) { b.classList.toggle('d-none', isBlasti); });
+                }
+            }
+            nameInput.addEventListener('input', updateName);
+            updateName();
         }
 
         var checked = document.querySelector('[data-sa-swatch]:checked');

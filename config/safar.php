@@ -5,6 +5,8 @@
 return [
     'nom' => env('SAFAR_NOM', 'Blasti'),
     'couleur' => env('SAFAR_COULEUR', '#0B4FC4'),
+    'logo' => env('SAFAR_LOGO'),
+    'logo_dark' => env('SAFAR_LOGO_DARK'),
 
     // Colors offered on the Apparence page. All of them keep white text readable (contrast >= 4.5:1).
     // The first three come from the BLASTI logo (its bright orange #F2690D is darkened for readable buttons).

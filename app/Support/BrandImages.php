@@ -23,14 +23,83 @@ class BrandImages
     /** Versions displayed on a dark background: their orange becomes pure white. */
     private const ON_DARK = ['blasti-logo-dark.png', 'blasti-hero-bus.png'];
 
+    public static function hasCustomLogo(): bool
+    {
+        return filled(config('safar.logo'));
+    }
+
+    public static function hasCustomLogoDark(): bool
+    {
+        return filled(config('safar.logo_dark'));
+    }
+
+    public static function isDefaultBrand(): bool
+    {
+        return strtolower(trim((string) config('safar.nom', 'Blasti'))) === 'blasti';
+    }
+
+    public static function logoUrl(): string
+    {
+        if (self::hasCustomLogo()) {
+            return asset('storage/' . config('safar.logo'));
+        }
+
+        return self::url('blasti-logo.png');
+    }
+
+    public static function logoDarkUrl(): string
+    {
+        if (self::hasCustomLogoDark()) {
+            return asset('storage/' . config('safar.logo_dark'));
+        }
+        if (self::hasCustomLogo()) {
+            return asset('storage/' . config('safar.logo'));
+        }
+
+        return self::url('blasti-logo-dark.png');
+    }
+
     public static function url(string $file): string
     {
+        if ($file === 'blasti-logo.png' && self::hasCustomLogo()) {
+            return asset('storage/' . config('safar.logo'));
+        }
+        if ($file === 'blasti-logo-dark.png') {
+            if (self::hasCustomLogoDark()) {
+                return asset('storage/' . config('safar.logo_dark'));
+            }
+            if (self::hasCustomLogo()) {
+                return asset('storage/' . config('safar.logo'));
+            }
+        }
+
         return asset(self::relative($file));
     }
 
     /** Absolute path (the PDF ticket embeds the file). */
     public static function path(string $file): string
     {
+        if ($file === 'blasti-logo.png' && self::hasCustomLogo()) {
+            $p = storage_path('app/public/' . config('safar.logo'));
+            if (is_file($p)) {
+                return $p;
+            }
+        }
+        if ($file === 'blasti-logo-dark.png') {
+            if (self::hasCustomLogoDark()) {
+                $p = storage_path('app/public/' . config('safar.logo_dark'));
+                if (is_file($p)) {
+                    return $p;
+                }
+            }
+            if (self::hasCustomLogo()) {
+                $p = storage_path('app/public/' . config('safar.logo'));
+                if (is_file($p)) {
+                    return $p;
+                }
+            }
+        }
+
         return public_path(self::relative($file));
     }
 

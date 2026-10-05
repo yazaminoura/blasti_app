@@ -73,8 +73,18 @@
                     <div class="footer-widget">
                         {{-- Brand block (replaces a newsletter form that sent nothing) --}}
                         <div class="mb-4 mz-footer-brand d-flex gap-3 align-items-start">
-                            <img src="{{ \App\Support\BrandImages::url('blasti-logo.png') }}" alt="BLASTI" class="flex-shrink-0 mz-logo-light">
-                            <img src="{{ \App\Support\BrandImages::url('blasti-logo-dark.png') }}" alt="BLASTI" class="flex-shrink-0 mz-logo-dark">
+                            @if (\App\Support\BrandImages::hasCustomLogo())
+                                <img src="{{ \App\Support\BrandImages::logoUrl() }}" alt="{{ config('safar.nom') }}" class="flex-shrink-0 mz-logo-light" style="max-height: 48px; width: auto; max-width: 160px; object-fit: contain;">
+                                <img src="{{ \App\Support\BrandImages::logoDarkUrl() }}" alt="{{ config('safar.nom') }}" class="flex-shrink-0 mz-logo-dark" style="max-height: 48px; width: auto; max-width: 160px; object-fit: contain;">
+                            @elseif (! \App\Support\BrandImages::isDefaultBrand())
+                                <div class="d-flex align-items-center gap-2 flex-shrink-0 py-1">
+                                    <img src="{{ \App\Support\BrandImages::url('blasti-bus.png') }}" alt="{{ config('safar.nom') }}" style="height: 38px; width: auto;">
+                                    <span class="fs-4 fw-bold text-white">{{ config('safar.nom') }}</span>
+                                </div>
+                            @else
+                                <img src="{{ \App\Support\BrandImages::url('blasti-logo.png') }}" alt="BLASTI" class="flex-shrink-0 mz-logo-light">
+                                <img src="{{ \App\Support\BrandImages::url('blasti-logo-dark.png') }}" alt="BLASTI" class="flex-shrink-0 mz-logo-dark">
+                            @endif
                             <div>
                                 <p class="mb-2 fs-14">{{ __('Réservez vos billets de bus entre les villes du Maroc, choisissez votre siège et recevez votre billet en PDF.') }}</p>
                                 <a href="{{ route('voyages.list') }}" class="btn btn-primary btn-sm">{{ __('Voir les départs') }}</a>

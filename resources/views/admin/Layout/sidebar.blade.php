@@ -44,7 +44,7 @@
         <a href="{{ route('admin') }}" class="text-decoration-none">
             <x-admin.logo :size="46" />
         </a>
-        <span class="sa-brand-tag">Admin</span>
+        <span class="sa-brand-tag">{{ __('Admin') }}</span>
     </div>
 
     <nav class="sa-nav">
@@ -53,26 +53,26 @@
             @continue(empty($visible))
 
             @if ($section !== '')
-                <div class="sa-nav-label">{{ $section }}</div>
+                <div class="sa-nav-label">{{ __($section) }}</div>
             @endif
 
             @foreach ($visible as [$permission, $route, $pattern, $icon, $label])
-                <a href="{{ route($route) }}" class="sa-nav-link {{ request()->routeIs($pattern) ? 'active' : '' }}" title="{{ $label }}">
+                <a href="{{ route($route) }}" class="sa-nav-link {{ request()->routeIs($pattern) ? 'active' : '' }}" title="{{ __($label) }}">
                     <i class="bi {{ $icon }}"></i>
-                    <span>{{ $label }}</span>
+                    <span>{{ __($label) }}</span>
                 </a>
             @endforeach
         @endforeach
     </nav>
 
     <div class="sa-sidebar-footer">
-        <a href="{{ route('home') }}" class="sa-nav-link" target="_blank" title="Voir le site">
+        <a href="{{ route('home') }}" class="sa-nav-link" target="_blank" title="{{ __('Voir le site') }}">
             <i class="bi bi-box-arrow-up-right"></i>
-            <span>Voir le site</span>
+            <span>{{ __('Voir le site') }}</span>
         </a>
-        <button type="button" class="sa-nav-link sa-collapse-btn d-none d-lg-flex" data-sa-sidebar-collapse title="Réduire le menu">
+        <button type="button" class="sa-nav-link sa-collapse-btn d-none d-lg-flex" data-sa-sidebar-collapse title="{{ __('Réduire le menu') }}">
             <i class="bi bi-layout-sidebar-inset"></i>
-            <span>Réduire le menu</span>
+            <span>{{ __('Réduire le menu') }}</span>
         </button>
     </div>
 </aside>
