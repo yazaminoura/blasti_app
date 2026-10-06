@@ -514,7 +514,121 @@ a { text-decoration: none; }
 .sa-upload-preview.contain img { object-fit: contain; padding: 6px; }
 .sa-upload .form-control { flex: 1; }
 
-/* ---------- Filters ---------- */
+/* ---------- Platform Brand Logo Redesign ---------- */
+.extra-small { font-size: .75rem; line-height: 1.35; }
+.cursor-pointer { cursor: pointer; }
+
+.sa-form-section.sa-logo-section { grid-template-columns: 1fr; gap: 1rem; }
+.sa-logo-card {
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: var(--sa-radius, 14px);
+    transition: box-shadow .2s ease, border-color .2s ease;
+}
+.sa-logo-card:hover {
+    box-shadow: 0 4px 16px -3px rgba(0, 0, 0, .07);
+}
+
+.sa-logo-stage {
+    min-height: 124px;
+    border-radius: var(--sa-radius-sm, 10px);
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.25rem;
+    transition: border-color .2s ease, opacity .2s ease, filter .2s ease;
+}
+
+.sa-logo-stage-light {
+    background-color: #ffffff;
+    background-image: 
+        linear-gradient(45deg, #f1f5f9 25%, transparent 25%),
+        linear-gradient(-45deg, #f1f5f9 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #f1f5f9 75%),
+        linear-gradient(-45deg, transparent 75%, #f1f5f9 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    border: 1px solid var(--sa-border);
+}
+
+.sa-logo-stage-dark {
+    background-color: #0b132b;
+    background-image: 
+        linear-gradient(45deg, #131d3b 25%, transparent 25%),
+        linear-gradient(-45deg, #131d3b 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #131d3b 75%),
+        linear-gradient(-45deg, transparent 75%, #131d3b 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.sa-logo-stage-img {
+    max-height: 56px;
+    max-width: 82%;
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 5px rgba(0, 0, 0, .08));
+    transition: transform .25s cubic-bezier(0.16, 1, 0.3, 1), opacity .2s ease;
+}
+.sa-logo-stage:hover .sa-logo-stage-img {
+    transform: scale(1.04);
+}
+.sa-logo-stage.is-marked-delete {
+    opacity: .35;
+    filter: grayscale(1);
+}
+
+.sa-logo-dropzone {
+    border: 2px dashed var(--sa-border);
+    background: var(--sa-surface-2);
+    border-radius: var(--sa-radius-sm, 10px);
+    padding: 1.15rem 0.85rem;
+    text-align: center;
+    position: relative;
+    cursor: pointer;
+    transition: border-color .2s ease, background-color .2s ease, transform .15s ease;
+}
+.sa-logo-dropzone:hover {
+    border-color: var(--brand);
+    background-color: color-mix(in srgb, var(--brand) 6%, var(--sa-surface-2));
+}
+.sa-logo-dropzone.is-dragover {
+    border-color: var(--brand);
+    background-color: color-mix(in srgb, var(--brand) 12%, var(--sa-surface));
+    transform: scale(1.01);
+}
+.sa-logo-dropzone.is-invalid {
+    border-color: #dc3545;
+}
+
+.sa-logo-file-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.sa-logo-file-info {
+    position: relative;
+    z-index: 3;
+    background: var(--sa-surface);
+    border: 1px solid var(--sa-border);
+    border-radius: 8px;
+    padding: .5rem .75rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+}
+
+.sa-logo-status-card {
+    background: var(--sa-surface-2);
+    border: 1px solid var(--sa-border);
+    border-radius: 12px;
+}
 .sa-filters { padding: 1rem 1.25rem; }
 .sa-filters .form-label { font-size: .75rem; color: var(--sa-muted); font-weight: 500; margin-bottom: .3rem; }
 .sa-filters .form-control, .sa-filters .form-select { padding-block: .45rem; font-size: .85rem; }

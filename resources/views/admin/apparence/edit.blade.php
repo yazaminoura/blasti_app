@@ -17,22 +17,201 @@
                 <x-admin.field name="nom" label="Nom" col="col-md-8" required maxlength="60" :value="$parametre->nom ?: config('safar.nom')" data-sa-name />
             </x-admin.form-section>
 
-            <x-admin.form-section title="Logo de la plateforme" description="Téléversez votre propre image de logo ou laissez vide pour utiliser le logo automatique avec le nom saisi." icon="bi-image">
-                <div class="row g-3">
-                    <x-admin.upload name="logo" label="Logo principal (fond clair)" :current="$parametre->logo" hint="PNG, SVG, WEBP ou JPG (recommandé : transparent, hauteur 40-60 px)." col="col-md-6" :contain="true" />
-                    <x-admin.upload name="logo_dark" label="Logo fond sombre (optionnel)" :current="$parametre->logo_dark" hint="Optionnel : version blanche ou claire pour les fonds sombres." col="col-md-6" :contain="true" />
-                    @if ($parametre->logo || $parametre->logo_dark)
-                        <div class="col-12 mt-2">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="supprimer_logo" id="supprimer_logo" value="1">
-                                <label class="form-check-label text-danger small fw-semibold" for="supprimer_logo">
-                                    <i class="bi bi-trash3 me-1"></i> Supprimer le logo personnalisé et revenir au logo automatique
-                                </label>
+            <div class="sa-form-section sa-logo-section">
+                <div class="sa-form-section-intro">
+                    <span class="sa-tile"><i class="bi bi-image"></i></span>
+                    <div>
+                        <h3>Logo de la plateforme</h3>
+                        <p>Téléversez votre propre logo, ou laissez vide pour garder le logo automatique avec le nom saisi.</p>
+                    </div>
+                </div>
+                @php
+                    $hasCustomMain = filled($parametre->logo);
+                    $hasCustomDark = filled($parametre->logo_dark);
+                    $hasAnyCustom = $hasCustomMain || $hasCustomDark;
+
+                    $mainLogoUrl = $hasCustomMain ? \App\Models\Ville::resolveImageUrl($parametre->logo) : \App\Support\BrandImages::logoUrl();
+                    $darkLogoUrl = $hasCustomDark ? \App\Models\Ville::resolveImageUrl($parametre->logo_dark) : ($hasCustomMain ? \App\Models\Ville::resolveImageUrl($parametre->logo) : \App\Support\BrandImages::logoDarkUrl());
+                @endphp
+
+                {{-- Status Banner --}}
+                @if ($hasAnyCustom)
+                    <div class="sa-logo-status-card p-3 mb-3 rounded-3 d-flex flex-wrap align-items-center justify-content-between gap-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="sa-logo-status-icon bg-success-subtle text-success rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
+                                <i class="bi bi-patch-check-fill fs-5"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold text-body d-flex align-items-center gap-2">
+                                    <span>Logo personnalisé actif</span>
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle extra-small">En ligne</span>
+                                </div>
+                                <div class="small text-muted">Votre image est utilisée sur tout le site et l'administration.</div>
                             </div>
                         </div>
-                    @endif
+                        <div class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                            <input class="form-check-input" type="checkbox" name="supprimer_logo" id="supprimer_logo" value="1" role="switch">
+                            <label class="form-check-label small fw-semibold text-danger cursor-pointer mb-0" for="supprimer_logo">
+                                <i class="bi bi-trash3 me-1"></i> Revenir au logo automatique
+                            </label>
+                        </div>
+                    </div>
+                @else
+                    <div class="sa-logo-status-card p-3 mb-3 rounded-3 d-flex align-items-center gap-3">
+                        <div class="sa-logo-status-icon bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 38px; height: 38px;">
+                            <i class="bi bi-magic fs-5"></i>
+                        </div>
+                        <div class="small text-muted">
+                            <strong class="text-body">Logo automatique actif.</strong> Généré avec le nom <strong class="brand-logo-text">{{ strtoupper($parametre->nom ?: config('safar.nom')) }}</strong> et la couleur du site.
+                        </div>
+                    </div>
+                @endif
+
+                <div class="row g-3">
+                    {{-- 1. Logo principal (Fond clair) --}}
+                    <div class="col-md-6">
+                        <div class="sa-logo-card h-100 p-3 rounded-3 d-flex flex-column">
+                            {{-- Card Header --}}
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div>
+                                    <div class="fw-bold text-body d-flex align-items-center gap-2">
+                                        <i class="bi bi-sun-fill text-warning"></i>
+                                        <span>Logo principal</span>
+                                    </div>
+                                    <div class="extra-small text-muted">En-tête clair, e-mails, tickets PDF</div>
+                                </div>
+                                <span class="badge bg-light text-dark border extra-small">Fond clair</span>
+                            </div>
+
+                            {{-- Preview Stage --}}
+                            <div class="sa-logo-stage sa-logo-stage-light rounded-3 position-relative mb-3 d-flex align-items-center justify-content-center p-3" id="stage_logo">
+                                <span class="badge bg-white text-secondary border position-absolute top-0 end-0 m-2 extra-small shadow-sm" id="badge_mode_logo" data-initial-text="{{ $hasCustomMain ? 'Personnalisé' : 'Automatique' }}">
+                                    {{ $hasCustomMain ? 'Personnalisé' : 'Automatique' }}
+                                </span>
+                                <img src="{{ $mainLogoUrl }}" 
+                                     alt="Logo principal" 
+                                     id="preview_img_logo" 
+                                     data-initial-src="{{ $mainLogoUrl }}"
+                                     class="sa-logo-stage-img">
+                            </div>
+
+                            {{-- Dropzone & Upload Button --}}
+                            <div class="sa-logo-dropzone rounded-3 p-3 text-center position-relative mb-2 @error('logo') is-invalid @enderror" id="dropzone_logo">
+                                <input type="file" name="logo" id="f_logo" accept="image/png,image/jpeg,image/svg+xml,image/webp" 
+                                       class="sa-logo-file-input" data-sa-target="logo">
+                                
+                                <div class="sa-logo-dropzone-prompt" id="prompt_logo">
+                                    <div class="sa-logo-drop-icon mb-1">
+                                        <i class="bi bi-cloud-arrow-up fs-2 text-primary"></i>
+                                    </div>
+                                    <div class="fw-semibold text-body small mb-1">
+                                        <span class="text-primary text-decoration-underline">Choisir une image</span> ou glisser ici
+                                    </div>
+                                    <div class="text-muted extra-small">
+                                        PNG, SVG, WEBP ou JPG · Max 2 Mo · H: 40-60 px
+                                    </div>
+                                </div>
+
+                                {{-- File selected status --}}
+                                <div class="sa-logo-file-info d-none text-start p-2 rounded-2" id="info_logo">
+                                    <div class="d-flex align-items-center justify-content-between gap-2">
+                                        <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                            <i class="bi bi-file-earmark-image-fill text-primary fs-5 flex-shrink-0"></i>
+                                            <div class="overflow-hidden">
+                                                <div class="fw-semibold small text-truncate text-body" id="name_logo"></div>
+                                                <div class="text-muted extra-small" id="size_logo"></div>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger border-0 py-1 px-2 flex-shrink-0" id="cancel_logo" title="Annuler la sélection">
+                                            <i class="bi bi-x-circle-fill"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @error('logo')
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ $message }}</div>
+                            @enderror
+
+                            <div class="extra-small text-muted mt-auto pt-2">
+                                <i class="bi bi-info-circle me-1"></i>Recommandé : image transparente (hauteur 40-60 px).
+                            </div>
+                        </div>
+                    </div>
+
+                    {{-- 2. Logo fond sombre (Optionnel) --}}
+                    <div class="col-md-6">
+                        <div class="sa-logo-card h-100 p-3 rounded-3 d-flex flex-column">
+                            {{-- Card Header --}}
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div>
+                                    <div class="fw-bold text-body d-flex align-items-center gap-2">
+                                        <i class="bi bi-moon-stars-fill text-info"></i>
+                                        <span>Logo fond sombre</span>
+                                        <span class="badge bg-secondary-subtle text-secondary fw-normal extra-small">Optionnel</span>
+                                    </div>
+                                    <div class="extra-small text-muted">Pied de page sombre, mode nuit</div>
+                                </div>
+                                <span class="badge bg-dark text-white border border-secondary extra-small">Fond sombre</span>
+                            </div>
+
+                            {{-- Preview Stage (Dark Canvas) --}}
+                            <div class="sa-logo-stage sa-logo-stage-dark rounded-3 position-relative mb-3 d-flex align-items-center justify-content-center p-3" id="stage_logo_dark">
+                                <span class="badge bg-dark text-light border border-secondary position-absolute top-0 end-0 m-2 extra-small shadow-sm" id="badge_mode_logo_dark" data-initial-text="{{ $hasCustomDark ? 'Personnalisé' : ($hasCustomMain ? 'Identique principal' : 'Automatique') }}">
+                                    {{ $hasCustomDark ? 'Personnalisé' : ($hasCustomMain ? 'Identique principal' : 'Automatique') }}
+                                </span>
+                                <img src="{{ $darkLogoUrl }}" 
+                                     alt="Logo fond sombre" 
+                                     id="preview_img_logo_dark" 
+                                     data-initial-src="{{ $darkLogoUrl }}"
+                                     class="sa-logo-stage-img">
+                            </div>
+
+                            {{-- Dropzone & Upload Button --}}
+                            <div class="sa-logo-dropzone rounded-3 p-3 text-center position-relative mb-2 @error('logo_dark') is-invalid @enderror" id="dropzone_logo_dark">
+                                <input type="file" name="logo_dark" id="f_logo_dark" accept="image/png,image/jpeg,image/svg+xml,image/webp" 
+                                       class="sa-logo-file-input" data-sa-target="logo_dark">
+                                
+                                <div class="sa-logo-dropzone-prompt" id="prompt_logo_dark">
+                                    <div class="sa-logo-drop-icon mb-1">
+                                        <i class="bi bi-cloud-arrow-up fs-2 text-info"></i>
+                                    </div>
+                                    <div class="fw-semibold text-body small mb-1">
+                                        <span class="text-primary text-decoration-underline">Choisir une image</span> ou glisser ici
+                                    </div>
+                                    <div class="text-muted extra-small">
+                                        Version blanche ou claire · PNG/SVG transparent
+                                    </div>
+                                </div>
+
+                                {{-- File selected status --}}
+                                <div class="sa-logo-file-info d-none text-start p-2 rounded-2" id="info_logo_dark">
+                                    <div class="d-flex align-items-center justify-content-between gap-2">
+                                        <div class="d-flex align-items-center gap-2 overflow-hidden">
+                                            <i class="bi bi-file-earmark-image-fill text-info fs-5 flex-shrink-0"></i>
+                                            <div class="overflow-hidden">
+                                                <div class="fw-semibold small text-truncate text-body" id="name_logo_dark"></div>
+                                                <div class="text-muted extra-small" id="size_logo_dark"></div>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger border-0 py-1 px-2 flex-shrink-0" id="cancel_logo_dark" title="Annuler la sélection">
+                                            <i class="bi bi-x-circle-fill"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            @error('logo_dark')
+                                <div class="text-danger small mt-1"><i class="bi bi-exclamation-triangle-fill me-1"></i>{{ $message }}</div>
+                            @enderror
+
+                            <div class="extra-small text-muted mt-auto pt-2">
+                                <i class="bi bi-info-circle me-1"></i>Si vide, le logo principal sera utilisé sur fond sombre.
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </x-admin.form-section>
+            </div>
 
             <div class="sa-form-section" style="grid-template-columns: 1fr;">
                 <div class="sa-form-section-intro">
@@ -169,6 +348,137 @@
             }
             nameInput.addEventListener('input', updateName);
             updateName();
+        }
+
+        // ---- Platform Logo Drag & Drop and Live Preview Sync ----
+        ['logo', 'logo_dark'].forEach(function (key) {
+            var input = document.getElementById('f_' + key);
+            var dropzone = document.getElementById('dropzone_' + key);
+            var cancelBtn = document.getElementById('cancel_' + key);
+            if (!input || !dropzone) return;
+
+            // Drag and drop visual cues
+            ['dragenter', 'dragover'].forEach(function (eventName) {
+                dropzone.addEventListener(eventName, function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.add('is-dragover');
+                });
+            });
+            ['dragleave', 'dragend', 'drop'].forEach(function (eventName) {
+                dropzone.addEventListener(eventName, function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropzone.classList.remove('is-dragover');
+                });
+            });
+
+            // File selection
+            input.addEventListener('change', function () {
+                var file = input.files && input.files[0];
+                if (!file) return;
+
+                if (!file.type.startsWith('image/')) {
+                    alert('Format non supporté : veuillez choisir une image (PNG, SVG, WEBP ou JPG).');
+                    input.value = '';
+                    return;
+                }
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('Image trop volumineuse : la taille maximale est de 2 Mo.');
+                    input.value = '';
+                    return;
+                }
+
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    var dataUrl = e.target.result;
+                    var previewImg = document.getElementById('preview_img_' + key);
+                    var badgeMode = document.getElementById('badge_mode_' + key);
+                    var promptBox = document.getElementById('prompt_' + key);
+                    var infoBox = document.getElementById('info_' + key);
+                    var nameEl = document.getElementById('name_' + key);
+                    var sizeEl = document.getElementById('size_' + key);
+
+                    if (previewImg) previewImg.src = dataUrl;
+                    if (badgeMode) {
+                        badgeMode.textContent = 'Nouvelle image';
+                        badgeMode.className = 'badge bg-warning text-dark border position-absolute top-0 end-0 m-2 extra-small shadow-sm';
+                    }
+                    if (nameEl) nameEl.textContent = file.name;
+                    if (sizeEl) sizeEl.textContent = (file.size / 1024).toFixed(1) + ' Ko';
+                    if (promptBox) promptBox.classList.add('d-none');
+                    if (infoBox) infoBox.classList.remove('d-none');
+
+                    // If user selects a new file, uncheck "supprimer_logo" if it was checked
+                    var sup = document.getElementById('supprimer_logo');
+                    if (sup && sup.checked) {
+                        sup.checked = false;
+                        sup.dispatchEvent(new Event('change'));
+                    }
+
+                    // Live sync with right-side preview cards
+                    var targetSelector = key === 'logo_dark' ? '.logo-on-dark' : '.logo-on-light';
+                    document.querySelectorAll(targetSelector).forEach(function (img) {
+                        if (img.tagName === 'IMG') {
+                            img.src = dataUrl;
+                        }
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+
+            // Cancel button
+            if (cancelBtn) {
+                cancelBtn.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    input.value = '';
+                    var previewImg = document.getElementById('preview_img_' + key);
+                    var badgeMode = document.getElementById('badge_mode_' + key);
+                    var promptBox = document.getElementById('prompt_' + key);
+                    var infoBox = document.getElementById('info_' + key);
+
+                    if (previewImg && previewImg.dataset.initialSrc) {
+                        previewImg.src = previewImg.dataset.initialSrc;
+                    }
+                    if (badgeMode) {
+                        var initialText = badgeMode.dataset.initialText || (key === 'logo_dark' ? 'Optionnel' : 'Automatique');
+                        badgeMode.textContent = initialText;
+                        badgeMode.className = key === 'logo_dark'
+                            ? 'badge bg-dark text-light border border-secondary position-absolute top-0 end-0 m-2 extra-small shadow-sm'
+                            : 'badge bg-white text-secondary border position-absolute top-0 end-0 m-2 extra-small shadow-sm';
+                    }
+                    if (promptBox) promptBox.classList.remove('d-none');
+                    if (infoBox) infoBox.classList.add('d-none');
+
+                    // Revert right-side preview image
+                    var targetSelector = key === 'logo_dark' ? '.logo-on-dark' : '.logo-on-light';
+                    var initialUrl = previewImg ? previewImg.dataset.initialSrc : null;
+                    if (initialUrl) {
+                        document.querySelectorAll(targetSelector).forEach(function (img) {
+                            if (img.tagName === 'IMG') {
+                                img.src = initialUrl;
+                            }
+                        });
+                    }
+                });
+            }
+        });
+
+        // Supprimer logo toggle
+        var supprimerLogo = document.getElementById('supprimer_logo');
+        if (supprimerLogo) {
+            supprimerLogo.addEventListener('change', function () {
+                var stageLight = document.getElementById('stage_logo');
+                var stageDark = document.getElementById('stage_logo_dark');
+                if (this.checked) {
+                    if (stageLight) stageLight.classList.add('is-marked-delete');
+                    if (stageDark) stageDark.classList.add('is-marked-delete');
+                } else {
+                    if (stageLight) stageLight.classList.remove('is-marked-delete');
+                    if (stageDark) stageDark.classList.remove('is-marked-delete');
+                }
+            });
         }
 
         var checked = document.querySelector('[data-sa-swatch]:checked');
