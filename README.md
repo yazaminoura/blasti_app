@@ -7,7 +7,7 @@
 
 ---
 
-Blasti is a bus-ticket booking platform built with Laravel 11. Travellers search for a trip, pick their seat on the bus map and get a PDF ticket. Bus companies' trips, fleets, bookings and refunds are managed from an admin panel.
+Blasti is a bus-ticket booking platform built with Laravel 12. Travellers search for a trip, pick their seat on the bus map and get a PDF ticket. Bus companies manage their trips, fleets, counter sales, boarding and refunds from a back office, and drivers check tickets with a QR scanner.
 
 ## Features
 
@@ -20,8 +20,11 @@ Blasti is a bus-ticket booking platform built with Laravel 11. Travellers search
 - Seat map per segment: seats sold on an overlapping segment are shown as taken.
 - Payment at boarding or by card (CMI, the Moroccan card-payment gateway: 3D Pay Hosting, ver3 SHA-512 hash).
 - Client account with a dashboard, tickets (web + PDF), profile and settings.
+- Promo codes, seat alerts on full buses, favourite trips, and changing a ticket to another departure.
+- Share a ticket on WhatsApp (trip, seats and PDF link), no WhatsApp Business account needed.
+- Reviews after the trip, published by the admin.
 - Cancellation until the bus leaves, with **refunds that depend on how early the client cancels** (see below).
-- E-mails: confirmation (PDF attached), reminder the day before, cancellation with the refund amount.
+- E-mails: confirmation (PDF attached), reminder the day before, cancellation with the refund amount, review request after the trip.
 - Pages: Destinations, Companies, Help (FAQ + refund table), About, Contact.
 - **French, English and Arabic** (right-to-left layout), plus light and dark mode.
 
@@ -32,13 +35,18 @@ Blasti is a bus-ticket booking platform built with Laravel 11. Travellers search
   - Mark a booking as paid.
   - Cancel a booking (the client is refunded 100 %).
   - Record a refund, with its amount.
-- Dashboard with revenue and occupancy, CSV exports.
-- Users, roles and permissions.
-- **Apparence**: one brand colour recolours the whole site and the logo.
+- Dashboard with revenue and occupancy, statistics, control alerts, CSV exports.
+- **Ticket counter (guichet)**: sell several seats in one order, edit passenger and seat, print the tickets.
+- **QR scanner**: checks each ticket at the bus door (paid, to pay, already boarded), with every scan logged.
+- Users, roles and permissions, including a **company role** that only sees its own buses, departures, tickets and reviews.
+- **Apparence**: platform name, one brand colour that recolours the whole site and the logo, and an optional uploaded logo (light and dark versions).
+
+**Driver space**
+- The driver's departures with the passenger list, and a button to report a delay.
 
 ## Tech stack
 
-- PHP 8.2+, Laravel 11, Blade, Bootstrap 5
+- PHP 8.2+, Laravel 12, Blade, Bootstrap 5
 - MySQL (production) or SQLite (local and tests)
 - barryvdh/laravel-dompdf for PDF tickets
 - PHPUnit feature tests
@@ -81,6 +89,7 @@ The same data is created on every machine.
 | Account | E-mail | Password |
 |---|---|---|
 | Admin | `admin@blasti.ma` | `password` |
+| Bus company | `compagnie@blasti.ma` | `password` |
 | Clients | e.g. `salma.bennani@example.com` | `password` |
 
 > Change these passwords, or set `DEMO_DATA=false`, before going live. To start over: `php artisan migrate:fresh`.
@@ -119,9 +128,14 @@ Add one cron entry on the server:
 * * * * * cd /path/to/blasti_app && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-It runs two commands:
+It runs these commands:
 - `reservations:rappels` (daily at 18:00): e-mails a reminder for tomorrow's trips.
 - `reservations:expirer` (every 5 minutes): frees the seats of card payments left unfinished.
+- `reservations:presence` (every 15 minutes): asks unpaid clients to pay or confirm, and cancels the ones who don't answer.
+- `reservations:agence` (every 15 minutes): cancels "pay at an agency" orders not paid in time.
+- `reservations:avis` (daily at 10:00): e-mails a review request to clients who travelled.
+
+To create an admin account on a fresh server: `php artisan blasti:admin you@example.com`.
 
 ## Tests
 
@@ -133,6 +147,7 @@ The tests run on an in-memory SQLite database. They cover:
 - booking and payment flows;
 - seat resale between stops;
 - the refund tiers;
+- the ticket counter, the scanner and the driver space;
 - admin permissions and business rules.
 
 ## Project layout
